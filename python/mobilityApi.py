@@ -19,6 +19,7 @@ import math
 from shapely.geometry import Point, shape
 import datetime
 import pandas as pd
+from flask_cors import CORS
 
 
 def createGrid(topLeft_lonLat, topEdge_lonLat, utm19N, wgs84, spatialData):
@@ -229,6 +230,7 @@ def create_app():
     return app
 
 app = create_app()
+CORS(app)
 
 @app.route('/choiceModels/volpe', methods=['GET'])
 def return_versions():

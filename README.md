@@ -25,7 +25,13 @@ The O-D data update every time the cityIO grid changes. The structure of the O-D
 ...
 ]
 
-where 'o' is the origin zone, 'd' is the destnation zone, 'm' is the mode where 0-3 correspond to 'driving', 'cycling', 'walking' and 'PT', and 'P' is the estimated number of people.
+where 'o' is the origin zone, 'd' is the destnation zone, 'm' is the mode where:
+
+| 0       | 1       | 2       | 3       |
+|---------|---------|---------|---------|
+| driving | cycling | walking | transit |
+
+'P' is the estimated number of people.
 
 # [Agents](https://cityio.media.mit.edu/choiceModels/volpe/v1.0/agents)
 The agents data update every time the cityIO grid changes. The structure is a list of agent groups with the same characteristics.

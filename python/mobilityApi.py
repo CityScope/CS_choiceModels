@@ -60,7 +60,9 @@ def get_geoId(longitude, latitude, regions_json, iZones):
 POOL_TIME = 1 #Seconds
 utm19N=pyproj.Proj("+init=EPSG:32619")
 wgs84=pyproj.Proj("+init=EPSG:4326")
-cityIO_url='https://cityio.media.mit.edu/api/table/cityscopeJSwalk'
+# host='https://cityio.media.mit.edu/'
+host='http://localhost:8080/' # local port running cityio
+cityIO_url='{}api/table/cityscopeJSwalk'.format(host)
 sampleMultiplier=20 # each person in PUMS corresponds to about 20 actual people
 
 LU_types=['L', 'W'] # the LU types we are interested in

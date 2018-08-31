@@ -1,0 +1,67 @@
+.App {
+  text-align: center;
+  background-color: black;
+}
+
+#deckgl-overlay {
+  /* background-color: black; */
+}
+
+.logo {
+  width: 5vw;
+  height: 5vw;
+}
+
+.info {
+  left: 5vw;
+  top: 5vw;
+  width: 20vw;
+  font-family: Roboto;
+  font-weight: 100;
+  color: white;
+  z-index: 10000;
+  position: absolute;
+}
+.info ul {
+  list-style-type: none;
+  list-style-position: outside;
+  margin-left: -40px;
+}
+.info h1,
+h2,
+h3,
+h4 {
+  font-weight: 700;
+}
+
+.UI {
+  padding-top: 2vw;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 25px;
+  outline: none;
+  opacity: 0.5;
+  -webkit-transition: 0.2s;
+  transition: opacity 0.2s;
+}
+
+.UI:hover {
+  opacity: 1;
+}
+
+#tooltip:empty {
+  display: none;
+}
+#tooltip {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  position: absolute;
+  padding: 4px;
+  margin: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  max-width: 300px;
+  font-size: 10px;
+  z-index: 9;
+  pointer-events: none;
+}

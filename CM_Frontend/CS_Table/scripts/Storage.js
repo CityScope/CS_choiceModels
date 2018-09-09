@@ -6,12 +6,20 @@ class Storage {
     this._cityIOurl = "";
   }
 
-  //web cam canvas
+  //cityIO url
   get cityIOurl() {
     return this._cityIOurl;
   }
   set cityIOurl(value) {
     this._cityIOurl = value;
+  }
+
+  //gridCellsArray
+  get gridCellsArray() {
+    return this._gridCellsArray;
+  }
+  set gridCellsArray(value) {
+    this._gridCellsArray = value;
   }
 }
 

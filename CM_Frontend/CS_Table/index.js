@@ -29,18 +29,22 @@ https://github.com/RELNO]
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 */
-
-var tableName = window.location.search.substring(1);
-let cityIOtableURL =
-  "https://cityio.media.mit.edu/api/table/" + tableName.toString();
-
-var interval = 1000;
-
-//start applet
-window.onload = setup();
+import "babel-polyfill";
+//Import Storage class
+import "./scripts/Storage";
+var mapboxgl = require("mapbox-gl/dist/mapbox-gl.js");
+import { Maptastic } from "./scripts/maptastic";
+import { getCityIO, makeGrid, update } from "./scripts/modules";
 
 async function setup() {
   //GET CITYIO
+  var tableName = window.location.search.substring(1);
+  let cityIOtableURL =
+    "https://cityio.media.mit.edu/api/table/" + tableName.toString();
+  //store this url
+  Storage.cityIOurl = cityIOtableURL;
+  var interval = 1000;
+
   //call server once at start, just to init the grid
   const cityIOjson = await getCityIO(cityIOtableURL);
   // get grid size
@@ -59,13 +63,13 @@ async function setup() {
   gridDIV.className = "gridDIV";
   tableDIV.appendChild(gridDIV);
 
-  makeGrid(gridDIV, gridSizeCols, gridSizeRows);
+  // makeGrid(gridDIV, gridSizeCols, gridSizeRows);
 
   //maptastic the div
   Maptastic("tableDIV");
 
   //run the update
-  window.setInterval("update()", interval);
+  window.setInterval(update, interval);
 
   //base map
   mapboxgl.accessToken =
@@ -79,7 +83,5 @@ async function setup() {
   });
 }
 
-async function update() {
-  const cityIOjson = await getCityIO(cityIOtableURL);
-  renderUpdate(cityIOjson);
-}
+//start applet
+window.onload = setup();

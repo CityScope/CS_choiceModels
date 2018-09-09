@@ -1,0 +1,17 @@
+html {
+  height: 100%;
+}
+body {
+  height: 100%;
+  margin: 0;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  overflow: hidden;
+  background: black;
+}
+
+.tableDIV {
+  width: 1200px;
+  height: 1200px;
+  margin: auto;
+}

@@ -1,6 +1,7 @@
 import "babel-polyfill";
 import "./Storage";
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * get cityIO method [uses polyfill]
  * @param cityIOtableURL cityIO API endpoint URL
@@ -18,6 +19,7 @@ export async function getCityIO() {
     });
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * make the initial DIVs grid
  */
@@ -45,7 +47,7 @@ export function makeGrid(gridDIV, gridSizeCols, gridSizeRows) {
   }
   Storage.gridCellsArray = gridCellsArray;
 }
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * controls the update sequence
  */
@@ -55,25 +57,26 @@ export async function update() {
   renderUpdate(cityIOjson);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * update the DIVs grid
  * @param jsonData cityIO API endpoint data
  */
-
 async function renderUpdate(jsonData) {
   let gridCellsArray = Storage.gridCellsArray;
   for (let i = 0; i < jsonData.grid.length; i++) {
-    gridCellsArray[i].innerHTML = jsonData.grid[i].toString();
-
     switch (jsonData.grid[i]) {
       case -1:
         gridCellsArray[i].style.backgroundColor = "rgb(0,0,0)";
         break;
       case 0:
         gridCellsArray[i].style.backgroundColor = "rgb(50,150,255)";
+        gridCellsArray[i].innerHTML = "Live";
         break;
       case 1:
         gridCellsArray[i].style.backgroundColor = "rgb(244,23,255)";
+        gridCellsArray[i].innerHTML = "Work";
+
         break;
       default:
         gridCellsArray[i].style.backgroundColor = "gray";

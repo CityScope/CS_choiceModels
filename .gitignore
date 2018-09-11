@@ -13,3 +13,6 @@ ehthumbs.db
 Thumbs.db
 CM_Frontend/CS_Table/temp
 CM_Frontend/CS_Table/package-lock.json
+# log files #
+/python/logs
+ 

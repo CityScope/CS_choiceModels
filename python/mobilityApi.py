@@ -20,6 +20,7 @@ from shapely.geometry import Point, shape
 import datetime
 import pandas as pd
 from flask_cors import CORS
+import logging
 
 
 def createGrid(topLeft_lonLat, topEdge_lonLat, utm19N, wgs84, spatialData):
@@ -56,11 +57,13 @@ def get_geoId(longitude, latitude, regions_json, iZones):
             return r, iZones
     return float('nan')
 
+logging.basicConfig(filename='./logs/'+datetime.datetime.now().strftime("%Y%d%m_%H%M%S" )+'.log',level=logging.DEBUG)
+
 #Define some constants
 POOL_TIME = 1 #Seconds
 utm19N=pyproj.Proj("+init=EPSG:32619")
 wgs84=pyproj.Proj("+init=EPSG:4326")
-# host='https://cityio.media.mit.edu/'
+#host='https://cityio.media.mit.edu/'
 host='http://localhost:8080/' # local port running cityio
 cityIO_url='{}api/table/cityscopeJSwalk'.format(host)
 sampleMultiplier=20 # each person in PUMS corresponds to about 20 actual people
@@ -78,7 +81,6 @@ simPop_mnl=pickle.load( open('./results/simPop_mnl.p', 'rb'))
 longSimPop=pickle.load( open('./results/longSimPop.p', 'rb'))
 #simPop_mnl=pd.read_pickle('./results/simPop_mnl.p')
 #longSimPop=pd.read_pickle('./results/longSimPop.p')
-print(len(longSimPop)/4)
 
 #add centroids
 for f in geoIdGeo_subset['features']:
@@ -144,7 +146,7 @@ def create_app():
             if cityIO_data['meta']['id']==lastId:
                 pass
             else:
-                print('change')
+                logging.info('change at '+str(startBg))
                 lastId=cityIO_data['meta']['id']
                 #find grids of this LU and the add to the corresponding zone
                 for lu in LU_types:
@@ -212,8 +214,7 @@ def create_app():
                     for lu in LU_types:
                         lu_changes[iz][lu+'_last']=lu_changes[iz][lu]
                 longSimPop['P']=simPop_mnl.predict(longSimPop)
-                print(len(longSimPop)/4)
-                print('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
+                logging.info('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
         yourThread = threading.Timer(POOL_TIME, background, args=())
         yourThread.start()        
 
@@ -247,14 +248,17 @@ def return_endPoints():
 @app.route('/choiceModels/volpe/v1.0/od', methods=['GET'])
 def get_od():
     # return a cross-tabulation of trips oriented by origin
+    logging.info('Received O-D request.')
     ct = longSimPop.groupby(['o', 'd', 'mode_id'], as_index=False).P.sum()
     ct=ct.loc[ct['P']>0.5]
     ct['P']=ct['P'].round(2)
     ct=ct.rename(columns={"mode_id": "m"})
+#    return "{"+",".join('"'+str(o)+'":'+ct.loc[ct['o']==o, ['d', 'm', 'P']].to_json(orient='records') for o in range(len(geoId2Int)))+"}"
     return '['+",".join([ct.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
 
 @app.route('/choiceModels/volpe/v1.0/agents', methods=['GET'])    
 def get_agents():
+    logging.info('Received agents request.')
     random.seed(0)
     # return a cross-tabulation oriented by agents
     ct = longSimPop.groupby(['o', 'd', 'ageQ3','mode_id'], as_index=False).P.sum()
@@ -262,10 +266,10 @@ def get_agents():
     ct=ct.loc[ct['P']>0]
     ct=ct.rename(columns={"mode_id": "m", "ageQ3": "a"})
     return ct.to_json(orient='records')
-    print(len(ct.loc[ct['d']==193]))
 
 @app.route('/choiceModels/volpe/v1.0/geo', methods=['GET'])
 def get_geo():
+    logging.info('Received geo request.')
     #return the subsetted geojson data
     return jsonify(geoIdGeo_subset)
 
@@ -276,6 +280,5 @@ def not_found(error):
 
 if __name__ == '__main__':
     app.run(port=3030, debug=False, use_reloader=False, threaded=True)
-    # if reloader is Trye, it starts the background thread twice
-    
-#test=[ct.loc[ct['o']==o].to_json(orient='records') for o in range(417)]    
+    # if reloader is True, it starts the background thread twice
+

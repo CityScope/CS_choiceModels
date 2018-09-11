@@ -66,14 +66,16 @@ async function renderUpdate(jsonData) {
   let gridCellsArray = Storage.gridCellsArray;
   for (let i = 0; i < jsonData.grid.length; i++) {
     switch (jsonData.grid[i]) {
-      case -1:
-        gridCellsArray[i].style.backgroundColor = "rgb(0,0,0)";
-        break;
       case 0:
+        gridCellsArray[i].style.backgroundColor = "white";
+        break;
+      case 1:
+      case 2:
         gridCellsArray[i].style.backgroundColor = "rgb(50,150,255)";
         gridCellsArray[i].innerHTML = "Live";
         break;
-      case 1:
+      case 3:
+      case 4:
         gridCellsArray[i].style.backgroundColor = "rgb(244,23,255)";
         gridCellsArray[i].innerHTML = "Work";
 

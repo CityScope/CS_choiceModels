@@ -34,7 +34,7 @@ import "babel-polyfill";
 import "./scripts/Storage";
 var mapboxgl = require("mapbox-gl/dist/mapbox-gl.js");
 import { Maptastic } from "./scripts/maptastic";
-import { getCityIO, makeGrid, update, initColors } from "./scripts/modules";
+import { getCityIO, makeGrid, update } from "./scripts/modules";
 
 async function setup() {
   //GET CITYIO

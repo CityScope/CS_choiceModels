@@ -32,11 +32,11 @@ body {
 
 .rawDIV {
   position: relative;
-  float: left;
+  float: right;
 }
 
 .gridCellDIV {
-  float: left;
+  float: right;
   color: white;
   opacity: 0.5;
   position: relative;

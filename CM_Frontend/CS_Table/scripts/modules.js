@@ -54,12 +54,13 @@ export function makeGrid(gridDIV, gridSizeCols, gridSizeRows) {
 export async function update() {
   let cityIOtableURL = Storage.cityIOurl;
   const cityIOjson = await getCityIO(cityIOtableURL);
+  slider(cityIOjson.grid);
   renderUpdate(cityIOjson);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
- * update the DIVs grid
+ * update the DIVs grid with data from CityIO
  * @param jsonData cityIO API endpoint data
  */
 async function renderUpdate(jsonData) {
@@ -67,21 +68,46 @@ async function renderUpdate(jsonData) {
   for (let i = 0; i < jsonData.grid.length; i++) {
     switch (jsonData.grid[i]) {
       case 0:
-        gridCellsArray[i].style.backgroundColor = "white";
+        gridCellsArray[i].innerHTML = "Open";
+        gridCellsArray[i].style.backgroundColor = "rgba(0,0,0,0.5)";
         break;
+
       case 1:
-      case 2:
-        gridCellsArray[i].style.backgroundColor = "rgb(50,150,255)";
+        gridCellsArray[i].style.backgroundColor = "rgba(50,150,255,0.5)";
         gridCellsArray[i].innerHTML = "Live";
         break;
-      case 3:
-      case 4:
-        gridCellsArray[i].style.backgroundColor = "rgb(244,23,255)";
-        gridCellsArray[i].innerHTML = "Work";
 
+      case 2:
+        gridCellsArray[i].style.backgroundColor = "rgba(0, 50, 170,0.5)";
+        gridCellsArray[i].innerHTML = "Live";
+        break;
+
+      case 3:
+        gridCellsArray[i].style.backgroundColor = "rgba(244,0,255,0.5)";
+        gridCellsArray[i].innerHTML = "Work";
+        break;
+
+      case 4:
+        gridCellsArray[i].style.backgroundColor = "rgba(255,0,150,0.5)";
+        gridCellsArray[i].innerHTML = "Work";
         break;
       default:
-        gridCellsArray[i].style.backgroundColor = "gray";
+        gridCellsArray[i].style.backgroundColor = "rgba(0, 0, 0, 0)";
+        gridCellsArray[i].innerHTML = "null";
+        break;
+    }
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * looks for slider in designated grid area
+ * @param jsonData cityIO API endpoint data
+ */
+async function slider(grid) {
+  for (let i = 15; i < grid.length; i = i + 16) {
+    if (grid[i] != -1 && grid[i] != 4) {
+      console.log(i, grid[i]);
     }
   }
 }

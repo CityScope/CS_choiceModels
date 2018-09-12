@@ -11,8 +11,8 @@ body {
 }
 
 .tableDIV {
-  width: 1200px;
-  height: 1200px;
+  width: 1500px;
+  height: 1500px;
   margin: auto;
 }
 
@@ -24,10 +24,10 @@ body {
 
 .gridDIV {
   position: fixed;
-  top: 15%;
-  left: 15%;
-  width: 900px;
-  height: 900px;
+  top: 20%;
+  left: 20%;
+  width: 1000px;
+  height: 1000px;
 }
 
 .rawDIV {
@@ -38,7 +38,7 @@ body {
 .gridCellDIV {
   float: right;
   color: white;
-  opacity: 0.5;
+  opacity: 1;
   position: relative;
   margin: 0 auto;
   font-family: Helvetica, sans-serif;

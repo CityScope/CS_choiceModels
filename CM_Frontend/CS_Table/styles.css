@@ -36,7 +36,7 @@ body {
 }
 
 .gridCellDIV {
-  float: right;
+  float: left;
   color: white;
   opacity: 1;
   position: relative;

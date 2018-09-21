@@ -63,12 +63,6 @@ simPop['employmentDensity_pow']=simPop.apply(lambda row: row['totalEmployment_po
 simPop['residentialDensity_pow']=simPop.apply(lambda row: row['totalResidents_pow']/geoidAttributes[row['workGEOID']]['landArea'], axis=1)
 simPop['employmentDensity_home']=simPop.apply(lambda row: row['totalEmployment_home']/geoidAttributes[row['homeGEOID']]['landArea'], axis=1)
 
-simPop['lwRatio_home']=simPop.apply(lambda row: geoidAttributes[row['homeGEOID']]['residents']/geoidAttributes[row['homeGEOID']]['employment'], axis=1)
-simPop['lwRatio_pow']=simPop.apply(lambda row: geoidAttributes[row['workGEOID']]['residents']/geoidAttributes[row['workGEOID']]['employment'], axis=1)
-#simPop['lwBalance_home']=simPop.apply(lambda row: -np.abs((geoidAttributes[row['homeGEOID']]['residents']-geoidAttributes[row['homeGEOID']]['employment']))/
-#      (4*(geoidAttributes[row['homeGEOID']]['residents']+geoidAttributes[row['homeGEOID']]['employment'])), axis=1)
-#simPop['lwBalance_pow']=simPop.apply(lambda row: -np.abs((geoidAttributes[row['workGEOID']]['residents']-geoidAttributes[row['workGEOID']]['employment']))/
-#      (4*(geoidAttributes[row['workGEOID']]['residents']+geoidAttributes[row['workGEOID']]['employment'])), axis=1)
 simPop['lwBalance_home']=simPop.apply(lambda row: -np.abs((row['residentialDensity_home']-row['employmentDensity_home']))/
       (4*(row['residentialDensity_home']+row['employmentDensity_home'])), axis=1)
 simPop['lwBalance_pow']=simPop.apply(lambda row: -np.abs((row['residentialDensity_pow']-row['employmentDensity_pow']))/
@@ -96,19 +90,15 @@ for i in range(len(simPop)):
         simPop.at[i,'walkTime_PT'] =max(simPop['walkTime_PT'])
         simPop.at[i,'waitTime_PT'] =max(simPop['waitTime_PT'])
         simPop.at[i,'transfers_PT'] =max(simPop['transfers_PT'])
-        
-## Delete small num of observations where transit directions not found but observed person takes PT
-#simPop=simPop.loc[simPop['PT_Avail'] | ~(simPop['simpleMode']==3)].reset_index(drop=True)
 
-#interact cost with income
-for m in ['drive', 'PT', 'walk', 'cycle']:
-    simPop['cost_'+m+'_by_personalIncome']=simPop.apply(lambda row: row['cost_'+m]/(max(row['incomePersonal'],10000)), axis=1) 
+##interact cost with income
+#for m in ['drive', 'PT', 'walk', 'cycle']:
+#    simPop['cost_'+m+'_by_personalIncome']=simPop.apply(lambda row: row['cost_'+m]/(max(row['incomePersonal'],10000)), axis=1) 
    
 simPop=simPop.sort_values(by='simpleMode').reset_index(drop=True)
 
 ##################### Create Long Dataframe for max likelihood estimation ############################
-ind_variables = ['ageQ_0', 'ageQ_1','ageQ_2', 'female', 'accessibleEmployment_home', 'totalHousing_home', 'totalEmployment_home','totalEmployment_pow', 'totalResidents_home','totalResidents_pow','lwRatio_home', 'lwRatio_pow',
-                 'residentialDensity_home', 'employmentDensity_pow', 'residentialDensity_pow', 'employmentDensity_home','lwBalance_home','lwBalance_pow','homeGEOID', 'workGEOID', 'incomeQ3', 'ageQ3', 'incomePersonal',
+ind_variables = ['employmentDensity_pow', 'residentialDensity_home', 'residentialDensity_pow','employmentDensity_home','lwBalance_home','lwBalance_pow','homeGEOID', 'workGEOID',
                  'profile_2', 'profile_3', 'profile_4', 'profile_5' ]
 # Specify the variables that vary across individuals and some or all alternatives
 
@@ -136,13 +126,7 @@ choice_column = "simpleMode"
 
 alt_varying_variables = {u'walk_time': dict([(2, 'tt_walk'), (3, 'walkTime_PT')]),
                          u'vehicle_time': dict([(0, 'tt_drive'), (3, 'transitTime_PT')]),
-                         u'wait_time': dict([(3, 'waitTime_PT')]),
-                         u'transfers': dict([(3, 'transfers_PT')]),
                          u'cycle_time': dict([(1, 'tt_cycle')]),
-#                         u'cost_by_personalIncome': dict([(0, 'cost_drive_by_personalIncome'),
-#                                       (1, 'cost_cycle_by_personalIncome'),
-#                                       (2, 'cost_walk_by_personalIncome'),
-#                                       (3, 'cost_PT_by_personalIncome')])
                          u'cost': dict([(0, 'cost_drive'),
                                        (1, 'cost_cycle'),
                                        (2, 'cost_walk'),
@@ -157,13 +141,6 @@ longSimPop=pl.convert_wide_to_long(simPop,
                                    choice_column,
                                    new_alt_id_name=custom_alt_id)
 
-
-longSimPop['totalEmployment_pow'] = longSimPop['totalEmployment_pow'].astype('float64')
-longSimPop['totalHousing_home'] = longSimPop['totalHousing_home'].astype('float64') 
-longSimPop['accessibleEmployment_home'] = longSimPop['accessibleEmployment_home'].astype('float64') 
-longSimPop['ageQ_0'] = longSimPop['ageQ_0'].astype('int') 
-longSimPop['ageQ_2'] = longSimPop['ageQ_2'].astype('int')
-
 #####################  Create the model specification ##################### 
 
 basic_specification = OrderedDict()
@@ -173,73 +150,18 @@ basic_specification["intercept"] = [1, 2, 3]
 basic_names["intercept"] = ['ASC Walk',
                             'ASC Cycle',
                             'ASC Transit']
-#only need N-1 vars for intercepts and individual variables
-
-#basic_specification["accessibleEmployment_home"] = [1, 2, 3]
-#basic_names["accessibleEmployment_home"] = [
-#                          'accessibleEmployment_home (Cycle)',
-#                          'accessibleEmployment_home (Walk)',
-#                          'accessibleEmployment_home (Transit)']
-
-#basic_specification["totalHousing_home"] = [1, 2, 3]
-#basic_names["totalHousing_home"] = [
-#                          'totalHousing_home (Cycle)',
-#                          'totalHousing_home (Walk)',
-#                          'totalHousing_home (Transit)']
-#basic_specification["totalEmployment_pow"] = [1, 2, 3]
-#basic_names["totalEmployment_pow"] = [
-#                          'totalEmployment_pow (Cycle)',
-#                          'totalEmployment_pow (Walk)',
-#                          'totalEmployment_pow (Transit)']
 
 basic_specification["lwBalance_home"] = [1, 2, 3]
 basic_names["lwBalance_home"] = [
                           'lwBalance_home (Cycle)',
                           'lwBalance_home (Walk)',
                           'lwBalance_home (Transit)']
-basic_specification["lwBalance_pow"] = [ 2, 3]
+basic_specification["lwBalance_pow"] = [ 2]
 basic_names["lwBalance_pow"] = [
 #                          'lwBalance_pow (Cycle)',
                           'lwBalance_pow (Walk)',
-                          'lwBalance_pow (Transit)']
-
-#basic_specification["totalResidents_home"] = [1, 2, 3]
-#basic_names["totalResidents_home"] = [
-#                          'totalResidents_home (Cycle)',
-#                          'totalResidents_home (Walk)',
-#                          'totalResidents_home (Transit)']
-#
-#basic_specification["totalResidents_pow"] = [1, 2, 3]
-#basic_names["totalResidents_pow"] = [
-#                          'totalResidents_pow (Cycle)',
-#                          'totalResidents_pow (Walk)',
-#                          'totalResidents_pow (Transit)']
-#
-#basic_specification["totalEmployment_home"] = [1, 2, 3]
-#basic_names["totalEmployment_home"] = [
-#                          'totalEmployment_home (Cycle)',
-#                          'totalEmployment_home (Walk)',
-#                          'totalEmployment_home (Transit)']
-#
-#basic_specification["totalEmployment_pow"] = [1, 2, 3]
-#basic_names["totalEmployment_pow"] = [
-#                          'totalEmployment_pow (Cycle)',
-#                          'totalEmployment_pow (Walk)',
-#                          'totalEmployment_pow (Transit)']
-
-
-
-#basic_specification["residentialDensity_home"] = [1, 2, 3]
-#basic_names["residentialDensity_home"] = [
-#                          'residentialDensity_home (Cycle)',
-#                          'residentialDensity_home (Walk)',
-#                          'residentialDensity_home (Transit)']
-
-#basic_specification["residentialDensity_pow"] = [1, 2, 3]
-#basic_names["residentialDensity_pow"] = [
-#                          'residentialDensity_pow (Cycle)',
-#                          'residentialDensity_pow (Walk)',
-#                          'residentialDensity_pow (Transit)']
+#                          'lwBalance_pow (Transit)'
+                          ]
 
 basic_specification["employmentDensity_home"] = [1, 2, 3]
 basic_names["employmentDensity_home"] = [
@@ -261,30 +183,6 @@ basic_names["vehicle_time"] = ['vehicle_time']
 
 basic_specification["cycle_time"] = [1]
 basic_names["cycle_time"] = ['cycling time']
-
-#basic_specification["wait_time"] = [3]
-#basic_names["wait_time"] = ['wait_time']
-
-#basic_specification["transfers"] = [3]
-#basic_names["transfers"] = ['transfers']
-
-
-#basic_specification["ageQ_0"] = [1, 2, 3]
-#basic_names["ageQ_0"] = [ 
-#                         'Age_young,  (Cycle)',
-#                          'Age_young, (Walk)',
-#                          'Age_young, (Transit)']
-#
-#basic_specification["ageQ_2"] = [ 1, 2, 3]
-#basic_names["ageQ_2"] = [ 
-#                         'Age_old,  (Cycle)',
-#                          'Age_old, (Walk)',
-#                          'Age_old, (Transit)']
-#
-#basic_specification["female"] = [ 1,  3]
-#basic_names["female"] = [ 
-#                         'female,  (Cycle)',
-#                          'female, (Transit)']
 
 
 basic_specification["profile_2"] = [1, 2, 3]
@@ -311,10 +209,6 @@ basic_names["profile_5"] = [
                          'profile_5,  (Cycle)',
                           'profile_5, (Walk)',
                           'profile_5, (Transit)']
-
-
-#basic_specification["cost_by_personalIncome"] = [[0, 1, 2, 3]]
-#basic_names["cost_by_personalIncome"] = [ 'cost_by_personalIncome']
 
 basic_specification["cost"] = [[0, 1, 2, 3]]
 basic_names["cost"] = [ 'cost']

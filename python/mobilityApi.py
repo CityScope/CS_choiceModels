@@ -80,8 +80,6 @@ geoIdAttributes=pickle.load( open( "./results/geoidAttributes.p", "rb" ) )
 geoIdGeo_subset=pickle.load( open( "./results/tractsMassSubset.p", "rb" ) )
 simPop_mnl=pickle.load( open('./results/simPop_mnl.p', 'rb'))
 longSimPop=pickle.load( open('./results/longSimPop.p', 'rb'))
-#simPop_mnl=pd.read_pickle('./results/simPop_mnl.p')
-#longSimPop=pd.read_pickle('./results/longSimPop.p')
 
 #add centroids
 for f in geoIdGeo_subset['features']:

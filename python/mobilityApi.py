@@ -66,7 +66,8 @@ wgs84=pyproj.Proj("+init=EPSG:4326")
 #host='https://cityio.media.mit.edu/'
 host='http://localhost:8080/' # local port running cityio
 cityIO_url='{}api/table/cityscopeJSwalk'.format(host)
-sampleMultiplier=20 # each person in PUMS corresponds to about 20 actual people
+sampleMultiplier=50 # each person in PUMS corresponds to about 50 actual people
+peoplePerBuilding=100
 
 LU_types=['L', 'W'] # the LU types we are interested in
 
@@ -112,13 +113,14 @@ for i in range(len(lon_grid)):
 interactionZones=set([grid2Geo[g] for g in grid2Geo])
 
 lu_changes={}
+landAreas={}
 #initialise the changes in land use
 for iz in interactionZones:
     lu_changes[iz]={}
     for lu in LU_types:
         lu_changes[iz][lu]=0
         lu_changes[iz][lu+'_last']=0
-    
+    landAreas[iz]=geoIdAttributes[geoIdOrderGeojson[iz]]['landArea']
 # lock to control access to variable
 dataLock = threading.Lock()
 # thread handler
@@ -153,15 +155,21 @@ def create_app():
                     lu_gridCells=[g for g in range(len(cityIO_data['grid'])) if cityIO_data['grid'][g] ==revTypeMap[lu]]
                     lu_zones=[grid2Geo[gc] for gc in lu_gridCells]
                     for iz in interactionZones:
-                        lu_changes[iz][lu]=sum([100 for luz in lu_zones if luz==iz])
+                        lu_changes[iz][lu]=sum([peoplePerBuilding for luz in lu_zones if luz==iz])
                  # for each interaction zone, for rows in simPop with home in this zone
                 for iz in interactionZones:                
-                    # TODO update accessible zones too
+                    # update lwBalance home and pow
                     o_increase=lu_changes[iz]['W']-lu_changes[iz]['W_last']
                     r_increase=lu_changes[iz]['L']-lu_changes[iz]['L_last']
-                    longSimPop.loc[longSimPop['o']==iz, 'housingDensity']+=r_increase
-                    longSimPop.loc[longSimPop['o']==iz, 'accessibleEmployment']+=o_increase
-                    longSimPop.loc[longSimPop['d']==iz, 'employmentDensity']+=o_increase
+                    newODensity=longSimPop.loc[longSimPop['o']==iz].iloc[0]['employmentDensity_home']+o_increase/landAreas[iz]
+                    newRDensity=longSimPop.loc[longSimPop['o']==iz].iloc[0]['residentialDensity_home']+r_increase/landAreas[iz]
+                    newLWBalance=-abs((newRDensity-newODensity))/(4*(newRDensity+newODensity))
+                    longSimPop.loc[longSimPop['o']==iz, 'employmentDensity_home']=newODensity
+                    longSimPop.loc[longSimPop['d']==iz, 'employmentDensity_pow']=newODensity
+                    longSimPop.loc[longSimPop['o']==iz, 'residentialDensity_home']=newRDensity
+                    longSimPop.loc[longSimPop['d']==iz, 'residentialDensity_pow']=newRDensity
+                    longSimPop.loc[longSimPop['o']==iz, 'lwBalance_home']=newLWBalance
+                    longSimPop.loc[longSimPop['d']==iz, 'lwBalance_pow']=newLWBalance
                     sampleWorkerIncrease=o_increase//sampleMultiplier
                     sampleHousingIncrease=r_increase//sampleMultiplier
                     # add new people for new employment capacity
@@ -169,7 +177,7 @@ def create_app():
                         # if N<0, delete LAST with this iz
                     if sampleWorkerIncrease>0:
 #                        print('O increased')
-                        candidates=set(longSimPop[longSimPop['d']==iz]['custom_id'].values)
+                        candidates=set(longSimPop[longSimPop['d']==iz]['custom_id'].values) #candidates for cloning
                         newPeople=pd.DataFrame()
                         for i in range(sampleWorkerIncrease):
                             newPeople=newPeople.append(longSimPop[longSimPop['custom_id']==random.sample(candidates,1)])
@@ -189,16 +197,15 @@ def create_app():
                         # this ensures the probability of a person to be selected for moving here is in proportion to their liklihood of living here- given their workplace
                         candidatesDf=longSimPop.loc[longSimPop['o']==iz]
                         for i in range(sampleHousingIncrease):
-                            candidateDf=candidatesDf[candidatesDf['custom_id']==candidatesDf['custom_id'].sample(n=1).values[0]]
-                            mover=longSimPop.loc[(longSimPop['d']==candidateDf.iloc[0]['d']) & (longSimPop['o']!=iz)]['custom_id'].sample(n=1).values[0]
+                            candidateDf=candidatesDf[candidatesDf['custom_id']==candidatesDf['custom_id'].sample(n=1).values[0]] #pick one of the current residents of the interaction zone
+                            mover=longSimPop.loc[(longSimPop['d']==candidateDf.iloc[0]['d']) & (longSimPop['o']!=iz)]['custom_id'].sample(n=1).values[0] #pick someone who works in the same area as this resident but doesnt live in the interactions zone
                             mask=longSimPop['custom_id']==mover
-                            # TODO income normalisation of cost
-                            for col in ['accessibleEmployment', 'housingDensity', 'homeGEOID', 'cycle_time','cost_by_personalIncome', 'vehicle_time', 'wait_time', 'walk_time', 'o']:
+                            for col in ['employmentDensity_home', 'lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
                                 longSimPop.loc[mask, col]=candidateDf[col].values                       
                     elif sampleHousingIncrease<0:
 #                        print('R decreased')
                         #find list of possible movers that live in iz
-                        possibleMovers=longSimPop.loc[(longSimPop['o']==iz)]['custom_id'].tolist()
+                        possibleMovers=set(longSimPop.loc[(longSimPop['o']==iz)]['custom_id'].tolist())
                         movers=random.sample(possibleMovers, -sampleHousingIncrease)
                         for i in range(-sampleHousingIncrease):
                             #pick  a mover from the list
@@ -209,12 +216,16 @@ def create_app():
                             candidateDf=candidatesDf[candidatesDf['custom_id']==candidatesDf['custom_id'].sample(n=1).values[0]]
                             #copy other persons details to the mover
                             mask=longSimPop['custom_id']==mover
-                            for col in ['accessibleEmployment', 'housingDensity', 'homeGEOID', 'cycle_time','cost_by_personalIncome', 'vehicle_time', 'wait_time', 'walk_time', 'o']:
+                            for col in ['employmentDensity_home', 'lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
                                 longSimPop.loc[mask, col]=candidateDf[col].values                            
                     for lu in LU_types:
                         lu_changes[iz][lu+'_last']=lu_changes[iz][lu]
                 longSimPop['P']=simPop_mnl.predict(longSimPop)
                 logging.info('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
+#                print('Driving: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==0)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+#                print('Cycling: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==1)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+#                print('Walking: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==2)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+#                print('PT: '+  str(sum(longSimPop.loc[(longSimPop['mode_id']==3)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
         yourThread = threading.Timer(POOL_TIME, background, args=())
         yourThread.start()        
 
@@ -248,7 +259,7 @@ def return_endPoints():
 @app.route('/choiceModels/volpe/v1.0/od', methods=['GET'])
 def get_od():
     # return a cross-tabulation of trips oriented by origin
-    logging.info('Received O-D request.')
+#    logging.info('Received O-D request.')
     ct = longSimPop.groupby(['o', 'd', 'mode_id'], as_index=False).P.sum()
     ct=ct.loc[ct['P']>0.5]
     ct['P']=ct['P'].round(2)
@@ -258,7 +269,7 @@ def get_od():
 
 @app.route('/choiceModels/volpe/v1.0/agents', methods=['GET'])    
 def get_agents():
-    logging.info('Received agents request.')
+#    logging.info('Received agents request.')
     random.seed(0)
     # return a cross-tabulation oriented by agents
     ct = longSimPop.groupby(['o', 'd', 'ageQ3','mode_id'], as_index=False).P.sum()
@@ -269,7 +280,7 @@ def get_agents():
 
 @app.route('/choiceModels/volpe/v1.0/geo', methods=['GET'])
 def get_geo():
-    logging.info('Received geo request.')
+#    logging.info('Received geo request.')
     #return the subsetted geojson data
     return jsonify(geoIdGeo_subset)
 

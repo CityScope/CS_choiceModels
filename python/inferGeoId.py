@@ -192,7 +192,7 @@ hh=pd.read_csv('./data/PUMS/csv_hma/ss16hma.csv')
 indiv=indiv.merge(hh[['HINCP', 'GRNTP', 'VEH']], left_index=True, right_index=True, how='left')
 
 colsToKeep={'PUMA':'homePUMA', 'POWPUMA':'workPOWPUMA', 'AGEP':'age', 'JWMNP':'travelT', 
-            'JWTR':'mode', 'HINCP':'incomeH', 'JWAP':'arrivalT', 'JWDP':'departureT', 'VEH': 'numCarsP', 'PINCP':'incomePersonal'}
+            'JWTR':'mode', 'HINCP':'incomeH', 'JWAP':'arrivalT', 'JWDP':'departureT', 'VEH': 'numCarsP', 'PINCP':'incomePersonal', 'SEX':'sex'}
 indivWide=indiv[[c for c in colsToKeep]]
 indivWide.columns=[colsToKeep[c] for c in colsToKeep]
 
@@ -211,12 +211,14 @@ indivWorkWide['mode-1']=indivWorkWide.apply(lambda row: int(row['mode'])-1, axis
 #indivWorkWide['workPOWPUMA']=indivWorkWide.apply(lambda row: int(row['workPOWPUMA']), axis=1)
 #
 indivWorkWide['simpleMode']=indivWorkWide.apply(lambda row: simpleMode(row['mode']), axis=1)
-indivWorkWide['incomeQ']=indivWorkWide.apply(lambda row: getIncomeBand(row), axis=1).astype(int)
+indivWorkWide['incomeQ']=indivWorkWide.apply(lambda row: getIncomeBand(row), axis=1)
+indivWorkWide=indivWorkWide.loc[indivWorkWide['incomeQ'].notnull()]
+indivWorkWide['incomeQ']=indivWorkWide['incomeQ'].astype('int')
 indivWorkWide['ageQ']=indivWorkWide.apply(lambda row: getAgeBand(row), axis=1)
 indivWorkWide['ageQ3'], ageBins=pd.qcut(indivWorkWide['age'], 3, labels=range(3), retbins=True)  
 indivWorkWide['incomeQ3'], incomeBins=pd.qcut(indivWorkWide['incomePersonal'], 3, labels=range(3), retbins=True)  
 
-indivWorkWide=indivWorkWide.loc[indivWorkWide['incomeQ'].notnull()]
+
 
 ############################ Build the CPDs for the Naive Bayes Classifier #######################################
 # 

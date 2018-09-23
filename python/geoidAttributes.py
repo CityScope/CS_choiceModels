@@ -38,6 +38,7 @@ commuting['WORKPLACE']=commuting.apply(lambda row: str(row['WORKPLACE']).split('
 
 commuting['Workers 16 and Over']=commuting.apply(lambda row: float(str(row['Workers 16 and Over']).replace(',',"")), axis=1)
 workersByWorkPlace=commuting.groupby('WORKPLACE').sum()
+workersByHomeLoc=commuting.groupby('RESIDENCE').sum()
 
 ############################################ Basic properties of each geoid  ############################################
 
@@ -53,16 +54,19 @@ for geoId in geoIdAttributes:
         geoIdName=geoIdGeo['features'][ind]['properties']['NAMELSAD10']
         try:
             totalWorkers=workersByWorkPlace.loc[geoIdName]['Workers 16 and Over']
+            totalResidents=workersByHomeLoc.loc[geoIdName]['Workers 16 and Over']
         except:
             print(geoIdName+' Area not in commuting data')
             totalWorkers=0
+            totalResidents=0
         props=geoIdGeo['features'][ind]['properties']
         geoidShape=shape(geoIdGeo['features'][ind]['geometry']) #get rectangular bounds as they are needed for OSM
 #        amenities=getOsmAmenities(geoidShape)
         geoIdAttributes[geoId]={'landArea': props['ALAND10'],
                     'waterArea': props['AWATER10'],                    
                     'housingDensity': housingUnits.loc[int(geoId)][2],
-                    'employment': totalWorkers                       
+                    'employment': totalWorkers,
+                    'residents': totalResidents            
                     }
     else:
         print(geoId + ': geoId id not in geojson')

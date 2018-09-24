@@ -65,7 +65,7 @@ utm19N=pyproj.Proj("+init=EPSG:32619")
 wgs84=pyproj.Proj("+init=EPSG:4326")
 #host='https://cityio.media.mit.edu/'
 host='http://localhost:8080/' # local port running cityio
-cityIO_url='{}api/table/cityscopeJSwalk'.format(host)
+cityIO_url='{}api/table/CityScopeJS'.format(host)
 sampleMultiplier=50 # each person in PUMS corresponds to about 50 actual people
 peoplePerBuilding=100
 
@@ -230,7 +230,11 @@ def create_app():
     def initialise():
         # Perform initial data processing
         longSimPop['P']=simPop_mnl.predict(longSimPop)
-        global yourThread
+#        print('Driving: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==0)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+#        print('Cycling: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==1)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+#        print('Walking: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==2)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+#        print('PT: '+  str(sum(longSimPop.loc[(longSimPop['mode_id']==3)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+#        global yourThread
         # Create the initial background thread
         yourThread = threading.Timer(POOL_TIME, background, args=())
         yourThread.start()

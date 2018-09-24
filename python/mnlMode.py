@@ -30,12 +30,8 @@ geoidAttributes=pickle.load(open('./results/geoidAttributes.p', 'rb'))
 
 ##################### get the prepared simPop data and add region data ################################# 
 simPop=pickle.load(open('./results/population.p', 'rb'))
-#simPop=simPop[:15000]
+simPop=simPop[:15000]
 travelCosts=pickle.load(open('./results/tractTravelCosts.p', 'rb'))
-
-# get rid of rows with unknown work location- this is due to there being for example, a positive number of cyclists in a zone based on the single-zone data
-# but zero cycling trips from that zone in the OD data- so cant probabilitically assign a destination
-simPop=simPop.dropna(subset=['workGEOID']).reset_index(drop=True)
 
 #get rid of work at home since this is exogenous to the model
 #print(len(simPop.loc[simPop['simpleMode']==4]))
@@ -43,12 +39,7 @@ simPop=simPop.loc[simPop['simpleMode']<4].reset_index(drop=True)
 
 simPop['homeGEOID']=simPop.apply(lambda row: str(int(row['homeGEOID'])), axis=1)
 simPop['workGEOID']=simPop.apply(lambda row: str(int(row['workGEOID'])), axis=1)
-simPop['ageQ3']=simPop.apply(lambda row: int(row['ageQ3']), axis=1)
-simPop['incomeQ3']=simPop.apply(lambda row: int(row['incomeQ3']), axis=1)
-#simPop['Male']=simPop.apply(lambda row: row['sex']==1, axis=1)
-simPop=pd.concat([simPop, pd.get_dummies(simPop['ageQ3'], prefix='ageQ')], axis=1) 
 simPop=pd.concat([simPop, pd.get_dummies(simPop['profile'], prefix='profile')], axis=1)
-
 
 simPop['accessibleEmployment_home']=simPop.apply(lambda row: geoidAttributes[row['homeGEOID']]['accessibleEmployment'], axis=1)
 simPop['totalHousing_home']=simPop.apply(lambda row: geoidAttributes[row['homeGEOID']]['housingDensity'], axis=1)
@@ -69,6 +60,8 @@ simPop['lwBalance_pow']=simPop.apply(lambda row: -np.abs((row['residentialDensit
       (4*(row['residentialDensity_pow']+row['employmentDensity_pow'])), axis=1)
 #gini coef
 
+simPop.at[simPop['lwBalance_pow'].isnull(),'lwBalance_pow']=0
+
 # add all travel times and costs to wide dataframe
 simPop['tt_walk']= simPop.apply(lambda row: travelCosts[str(int(row['homeGEOID']))][str(int(row['workGEOID']))]['walk']['time'], axis=1)
 simPop['tt_cycle']= simPop.apply(lambda row: travelCosts[str(int(row['homeGEOID']))][str(int(row['workGEOID']))]['cycle']['time'], axis=1)
@@ -84,6 +77,7 @@ simPop['cost_walk']=0
 simPop['cost_cycle']=annualBicycleCost/(daysPerYear*2)
 #simPop['PT_Avail']= simPop.apply(lambda row: not np.isnan(row['transitTime_PT']), axis=1)
 
+# if no transit route found by OTP, assume transit cost same as the maximum
 for i in range(len(simPop)):
     if np.isnan(simPop.iloc[i]['transitTime_PT']):
         simPop.at[i,'transitTime_PT'] =max(simPop['transitTime_PT']) 
@@ -151,17 +145,17 @@ basic_names["intercept"] = ['ASC Walk',
                             'ASC Cycle',
                             'ASC Transit']
 
-basic_specification["lwBalance_home"] = [1, 2, 3]
-basic_names["lwBalance_home"] = [
-                          'lwBalance_home (Cycle)',
-                          'lwBalance_home (Walk)',
-                          'lwBalance_home (Transit)']
-basic_specification["lwBalance_pow"] = [ 2]
-basic_names["lwBalance_pow"] = [
+#basic_specification["lwBalance_home"] = [1, 2, 3]
+#basic_names["lwBalance_home"] = [
+#                          'lwBalance_home (Cycle)',
+#                          'lwBalance_home (Walk)',
+#                          'lwBalance_home (Transit)']
+#basic_specification["lwBalance_pow"] = [ 1,2,3]
+#basic_names["lwBalance_pow"] = [
 #                          'lwBalance_pow (Cycle)',
-                          'lwBalance_pow (Walk)',
+#                          'lwBalance_pow (Walk)',
 #                          'lwBalance_pow (Transit)'
-                          ]
+#                          ]
 
 basic_specification["employmentDensity_home"] = [1, 2, 3]
 basic_names["employmentDensity_home"] = [
@@ -175,6 +169,18 @@ basic_names["employmentDensity_pow"] = [
                           'employmentDensity_pow (Walk)',
                           'employmentDensity_pow (Transit)']
 
+basic_specification["residentialDensity_home"] = [1, 2, 3]
+basic_names["residentialDensity_home"] = [
+                          'residentialDensity_home (Cycle)',
+                          'residentialDensity_home (Walk)',
+                          'residentialDensity_home (Transit)']
+
+basic_specification["residentialDensity_pow"] = [1,  3]
+basic_names["residentialDensity_pow"] = [
+                          'residentialDensity_pow (Cycle)',
+#                          'residentialDensity_pow (Walk)',
+                          'residentialDensity_pow (Transit)']
+
 basic_specification["walk_time"] = [[2, 3]]
 basic_names["walk_time"] = ['walking time']
 
@@ -184,16 +190,16 @@ basic_names["vehicle_time"] = ['vehicle_time']
 basic_specification["cycle_time"] = [1]
 basic_names["cycle_time"] = ['cycling time']
 
-
-basic_specification["profile_2"] = [1, 2, 3]
+basic_specification["profile_2"] = [1]
 basic_names["profile_2"] = [ 
                          'profile_2,  (Cycle)',
-                          'profile_2, (Walk)',
-                          'profile_2, (Transit)']
+#                          'profile_2, (Walk)',
+#                          'profile_2, (Transit)'
+                          ]
 
-basic_specification["profile_3"] = [1, 2, 3]
+basic_specification["profile_3"] = [ 2, 3]
 basic_names["profile_3"] = [ 
-                         'profile_3,  (Cycle)',
+#                         'profile_3,  (Cycle)',
                           'profile_3, (Walk)',
                           'profile_3, (Transit)']
 
@@ -203,7 +209,6 @@ basic_names["profile_4"] = [
                           'profile_4, (Walk)',
                           'profile_4, (Transit)']
 
-
 basic_specification["profile_5"] = [1, 2, 3]
 basic_names["profile_5"] = [ 
                          'profile_5,  (Cycle)',
@@ -212,7 +217,6 @@ basic_names["profile_5"] = [
 
 basic_specification["cost"] = [[0, 1, 2, 3]]
 basic_names["cost"] = [ 'cost']
-
 
 ##################### Fit the model ##################### 
 simPop_mnl = pl.create_choice_model(data=longSimPop,
@@ -230,12 +234,3 @@ print(simPop_mnl.get_statsmodels_summary())
 
 pickle.dump(simPop_mnl, open('./results/simPop_mnl.p', 'wb'))
 pickle.dump(longSimPop, open('./results/longSimPop.p', 'wb'))
-
-#prediction_df=longSimPop.loc[longSimPop['custom_id']==longSimPop.iloc[0]['custom_id']]
-
-#create new json, one list entry for each person with:
-#homeGEOID, workGEOID, probDrive, probWalk...
-#derivatives on instantiation
-
-#print('VoT Driving, Income of 30000:')
-#print((-7.985e-05/(-671/30000))*3600)

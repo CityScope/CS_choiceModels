@@ -64,7 +64,7 @@ def getProfiles(clf, feature_names):
             # add the right condition
     return profiles, leaves2Profiles
         
-fractionSample=0.4
+fractionSample=0.35
 # the sample will first be narrowed down by (i) home loc in GBA, (ii) in thr work force and 
 # (iii) the HH income could be identified
 # a fraction of the remaining sample for ease of computation when fitting the logit model
@@ -277,7 +277,7 @@ pickle.dump(geoid2puma, open('./results/tract2puma.p', 'wb'))
 
 indivCommute['homeGEOID']=np.nan
 indivCommute['workGEOID']=np.nan
-indivCommuteOut=indivCommute.sample(frac=fractionSample, weights=indivCommute['weighting']).copy()
+indivCommuteOut=indivCommute.sample(frac=fractionSample, weights=indivCommute['weighting'], random_state=0).copy()
 # shuffle the dataframe (in case theere's some ordering in the PUMS data)
 indivCommuteOut=indivCommuteOut.reset_index(drop=True)
 

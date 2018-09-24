@@ -16,7 +16,6 @@ import pickle
 import pylogit as pl
 import pyproj
 
-
 utm19N=pyproj.Proj("+init=EPSG:32619")
 wgs84=pyproj.Proj("+init=EPSG:4326")
 
@@ -30,7 +29,6 @@ geoidAttributes=pickle.load(open('./results/geoidAttributes.p', 'rb'))
 
 ##################### get the prepared simPop data and add region data ################################# 
 simPop=pickle.load(open('./results/population.p', 'rb'))
-simPop=simPop[:15000]
 travelCosts=pickle.load(open('./results/tractTravelCosts.p', 'rb'))
 
 #get rid of work at home since this is exogenous to the model
@@ -190,16 +188,16 @@ basic_names["vehicle_time"] = ['vehicle_time']
 basic_specification["cycle_time"] = [1]
 basic_names["cycle_time"] = ['cycling time']
 
-basic_specification["profile_2"] = [1]
+basic_specification["profile_2"] = [1, 2, 3]
 basic_names["profile_2"] = [ 
                          'profile_2,  (Cycle)',
-#                          'profile_2, (Walk)',
-#                          'profile_2, (Transit)'
+                          'profile_2, (Walk)',
+                          'profile_2, (Transit)'
                           ]
 
-basic_specification["profile_3"] = [ 2, 3]
+basic_specification["profile_3"] = [1, 2, 3]
 basic_names["profile_3"] = [ 
-#                         'profile_3,  (Cycle)',
+                         'profile_3,  (Cycle)',
                           'profile_3, (Walk)',
                           'profile_3, (Transit)']
 

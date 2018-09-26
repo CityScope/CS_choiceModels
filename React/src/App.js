@@ -34,10 +34,7 @@ import React from "react";
 import "typeface-roboto";
 import { parseCityIO, allODarcs, ODarcsForThisTract } from "./components";
 import "./App.css";
-import TRACTS from "./geojson/tracts.geojson";
-import TRACTSjson from "./geojson/tracts.json";
 //get dummy OD from init
-import ODdummy from "./geojson/od.json";
 import logo from "./logo.png";
 import DeckGL, {
   TextLayer,
@@ -53,6 +50,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 const transitionInterpolator = new LinearInterpolator(["bearing"]);
 const cityIOapi = "https://cityio.media.mit.edu/api/table/CityScopeJS";
 const ODapi = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/od";
+const GeoJsonAPI = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/geo";
 const INITIAL_VIEW_STATE = {
   latitude: 42.3601,
   longitude: -71.0942,
@@ -69,8 +67,8 @@ const LIGHT_SETTINGS = {
   numberOfLights: 2
 };
 
-//store the bew ood from API in global var
-var OD = ODdummy;
+//store a dunmmy OD from API in global var for start
+var OD = null;
 
 // DeckGL react component
 class App extends React.Component {
@@ -92,20 +90,20 @@ class App extends React.Component {
       arcsArr: [],
       textArr: [],
       viewState: INITIAL_VIEW_STATE,
-      cityIOtableData: null
+      cityIOtableData: null,
+      GeoJsonData: null
     };
   }
 
   /////////////////////////
 
   componentDidMount() {
-    const allArcs = allODarcs(TRACTSjson, OD);
-    this.setState({ arcsArr: allArcs });
+    this.getGEOJSON();
     //get initial cityIO
     this.getCityIO();
     //and set interval
-    setInterval(this.getCityIO, 3000);
-    setInterval(this.getOD, 3000);
+    setInterval(this.getCityIO, 2000);
+    setInterval(this.getOD, 2000);
   }
 
   /////////////////////////
@@ -115,6 +113,20 @@ class App extends React.Component {
       const res = await fetch(ODapi);
       const ODdata = await res.json();
       OD = ODdata;
+      return OD;
+    } catch (e) {
+      console.log("err:", e);
+    }
+  };
+
+  getGEOJSON = async () => {
+    console.log("Trying to get Geo Data");
+    try {
+      const res = await fetch(GeoJsonAPI);
+      const d = await res.json();
+      this.setState({ GeoJsonData: d });
+      const allArcs = allODarcs(d, OD);
+      this.setState({ arcsArr: allArcs });
     } catch (e) {
       console.log("err:", e);
     }
@@ -140,23 +152,6 @@ class App extends React.Component {
 
   /////////////////////////
 
-  _goToNYC() {
-    this.setState({
-      viewState: {
-        ...this.state.viewState,
-        longitude: -74.1,
-        latitude: 40.7,
-        zoom: 14,
-        pitch: 0,
-        bearing: 0,
-        transitionDuration: 8000,
-        transitionInterpolator: new FlyToInterpolator()
-      }
-    });
-  }
-
-  /////////////////////////
-
   _onLoad = () => {
     this._rotateCamera();
   };
@@ -179,7 +174,28 @@ class App extends React.Component {
 
   /////////////////////////
 
+  _flyTo = () => {
+    this.setState({
+      viewState: {
+        ...this.state.viewState,
+        longitude: -71.085543,
+        latitude: 42.364051,
+        zoom: 15,
+        pitch: 0,
+        bearing: 0,
+        transitionDuration: 2000,
+        transitionInterpolator: new FlyToInterpolator()
+      }
+    });
+    setTimeout(this._rotateCamera(), 4000);
+  };
+
+  /////////////////////////
+
   _onHoverTract({ x, y, object, index }) {
+    if (index === 193) {
+      this._flyTo();
+    }
     this.setState({
       thisTract: { x, y, index, object }
     });
@@ -188,7 +204,8 @@ class App extends React.Component {
       return;
     } else {
       const tract = this.state.thisTract.index;
-      const allArcs = ODarcsForThisTract(tract, TRACTSjson, OD);
+      const allArcs = ODarcsForThisTract(tract, this.state.GeoJsonData, OD);
+
       this.setState({ arcsArr: allArcs });
     }
     this._modeCounter();
@@ -238,7 +255,7 @@ class App extends React.Component {
       }),
       new GeoJsonLayer({
         id: "TRACTS",
-        data: TRACTS,
+        data: this.state.GeoJsonData,
         extruded: false,
         wireframe: true,
         stroked: true,
@@ -328,7 +345,7 @@ class App extends React.Component {
 
   _mouseOnTract = () => {
     const thisTractIndex = this.state.thisTract.index;
-    if (thisTractIndex !== -1) {
+    if (thisTractIndex && thisTractIndex !== -1) {
       return (
         <span>
           <ul>

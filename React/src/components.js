@@ -37,12 +37,14 @@ export function ODarcsForThisTract(tract, TRACTSjson, OD) {
 
   // create the arcs array
   for (let i = 0; i < OD[tract].length; i++) {
+    //count the # of arcs
     addToDestPoint++;
     if (OD[tract][i].o !== OD[tract][i].d && OD[tract][i].P > 0) {
       const firstPointInOrgTract =
-        tractFeatures[OD[tract][i].o].geometry.coordinates[0][0][0];
+        // tractFeatures[OD[tract][i].o].geometry.coordinates[0][0][0];
+        tractFeatures[OD[tract][i].o].properties.centroid;
       const firstPointInDesTract =
-        tractFeatures[OD[tract][i].d].geometry.coordinates[0][0][0];
+        tractFeatures[OD[tract][i].d].properties.centroid;
 
       arcsArr.push({
         source: [firstPointInOrgTract[0], firstPointInOrgTract[1]],

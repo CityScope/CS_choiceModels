@@ -32,7 +32,7 @@ https://github.com/RELNO]
 
 import React from "react";
 import "typeface-roboto";
-import { parseCityIO, allODarcs, ODarcsForThisTract } from "./components";
+import { parseCityIO, ODarcsForThisTract } from "./components";
 import "./App.css";
 //get dummy OD from init
 import logo from "./logo.png";
@@ -125,8 +125,6 @@ class App extends React.Component {
       const res = await fetch(GeoJsonAPI);
       const d = await res.json();
       this.setState({ GeoJsonData: d });
-      const allArcs = allODarcs(d, OD);
-      this.setState({ arcsArr: allArcs });
     } catch (e) {
       console.log("err:", e);
     }
@@ -204,9 +202,10 @@ class App extends React.Component {
       return;
     } else {
       const tract = this.state.thisTract.index;
-      const allArcs = ODarcsForThisTract(tract, this.state.GeoJsonData, OD);
-
-      this.setState({ arcsArr: allArcs });
+      if (OD && this.state.GeoJsonData) {
+        const allArcs = ODarcsForThisTract(tract, this.state.GeoJsonData, OD);
+        this.setState({ arcsArr: allArcs });
+      }
     }
     this._modeCounter();
   }

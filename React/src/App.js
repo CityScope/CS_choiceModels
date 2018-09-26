@@ -47,6 +47,8 @@ import { StaticMap } from "react-map-gl";
 //fixes CSS missing issue
 import "mapbox-gl/dist/mapbox-gl.css";
 
+var TimerMixin = require("react-timer-mixin");
+
 const transitionInterpolator = new LinearInterpolator(["bearing"]);
 const cityIOapi = "https://cityio.media.mit.edu/api/table/CityScopeJS";
 const ODapi = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/od";
@@ -104,6 +106,10 @@ class App extends React.Component {
     //and set interval
     setInterval(this.getCityIO, 2000);
     setInterval(this.getOD, 2000);
+
+    TimerMixin.setInterval(() => {
+      this._demoMode();
+    }, 5000);
   }
 
   /////////////////////////
@@ -155,10 +161,27 @@ class App extends React.Component {
   };
   /////////////////////////
 
+  _demoMode = () => {
+    let tractLen = this.state.GeoJsonData.features.length;
+    let rndTract = Math.floor(this._rndLoc(0, tractLen));
+    // this._onHoverTract(this.state.GeoJsonData.features[rndTract], rndTract);
+
+    this._flyTo(
+      this.state.GeoJsonData.features[rndTract].properties.centroid,
+      this._rndLoc(0, 180)
+    );
+  };
+
+  _rndLoc = (min, max) => {
+    return Math.random() * (max - min) + min;
+  };
+
+  /////////////////////////
+
   // change bearing by 120 degrees.
   _rotateCamera = () => {
     // change bearing by 120 degrees.
-    const bearing = this.state.viewState.bearing + 120;
+    const bearing = this.state.viewState.bearing;
     this.setState({
       viewState: {
         ...this.state.viewState,
@@ -172,44 +195,42 @@ class App extends React.Component {
 
   /////////////////////////
 
-  _flyTo = () => {
+  _flyTo = (centroid, bearing) => {
     this.setState({
       viewState: {
         ...this.state.viewState,
-        longitude: -71.085543,
-        latitude: 42.364051,
-        zoom: 15,
-        pitch: 0,
-        bearing: 0,
-        transitionDuration: 2000,
+        longitude: centroid[0],
+        latitude: centroid[1],
+        zoom: 12,
+        pitch: 45,
+        bearing: bearing,
+        transitionDuration: 4000,
         transitionInterpolator: new FlyToInterpolator()
       }
     });
-    setTimeout(this._rotateCamera(), 4000);
   };
 
   /////////////////////////
 
-  _onHoverTract({ x, y, object, index }) {
-    if (index === 193) {
-      this._flyTo();
-    }
+  _onHoverTract({ object, index }) {
     this.setState({
-      thisTract: { x, y, index, object }
+      thisTract: { index, object }
     });
-
+    //dont show if not on tract
     if (index < 1) {
       return;
     } else {
       const tract = this.state.thisTract.index;
+      //check we already got API data
       if (OD && this.state.GeoJsonData) {
-        const allArcs = ODarcsForThisTract(tract, this.state.GeoJsonData, OD);
-        this.setState({ arcsArr: allArcs });
+        const tractArcs = ODarcsForThisTract(tract, this.state.GeoJsonData, OD);
+        this.setState({ arcsArr: tractArcs });
       }
     }
     this._modeCounter();
   }
 
+  //helper to set the line width based on trips count
   _strkWidth(d) {
     let stw = d.P * 2;
     return stw;

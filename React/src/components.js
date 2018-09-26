@@ -1,31 +1,3 @@
-// MAKE ARCS FOR ALL TRACTS
-export function allODarcs(TRACTSjson, OD) {
-  console.log("MAKING ALL ARCS");
-  let tractFeatures = TRACTSjson.features;
-  const arcsArr = [];
-  //create the arcs array
-  for (let i = 0; i < OD.length; i++) {
-    for (let j = 0; j < OD[i].length; j++) {
-      if (OD[i][j].o !== OD[i][j].d && OD[i][j].P > 1) {
-        arcsArr.push({
-          source: [
-            tractFeatures[OD[i][j].o].geometry.coordinates[0][0][0][0],
-            tractFeatures[OD[i][j].o].geometry.coordinates[0][0][0][1]
-          ],
-          target: [
-            tractFeatures[OD[i][j].d].geometry.coordinates[0][0][0][0],
-            tractFeatures[OD[i][j].d].geometry.coordinates[0][0][0][1]
-          ],
-          P: OD[i][j].P,
-          M: OD[i][j].m
-        });
-      }
-    }
-  }
-
-  return arcsArr;
-}
-
 /////////////////////////
 
 //make arcs from OD json
@@ -41,7 +13,6 @@ export function ODarcsForThisTract(tract, TRACTSjson, OD) {
     addToDestPoint++;
     if (OD[tract][i].o !== OD[tract][i].d && OD[tract][i].P > 0) {
       const firstPointInOrgTract =
-        // tractFeatures[OD[tract][i].o].geometry.coordinates[0][0][0];
         tractFeatures[OD[tract][i].o].properties.centroid;
       const firstPointInDesTract =
         tractFeatures[OD[tract][i].d].properties.centroid;
@@ -79,4 +50,33 @@ export function parseCityIO(cityIOdata) {
     }
   }
   return textArr;
+}
+
+/////////////////////////
+// MAKE ARCS FOR ALL TRACTS
+export function allODarcs(TRACTSjson, OD) {
+  console.log("MAKING ALL ARCS");
+  let tractFeatures = TRACTSjson.features;
+  const arcsArr = [];
+  //create the arcs array
+  for (let i = 0; i < OD.length; i++) {
+    for (let j = 0; j < OD[i].length; j++) {
+      if (OD[i][j].o !== OD[i][j].d && OD[i][j].P > 1) {
+        arcsArr.push({
+          source: [
+            tractFeatures[OD[i][j].o].geometry.coordinates[0][0][0][0],
+            tractFeatures[OD[i][j].o].geometry.coordinates[0][0][0][1]
+          ],
+          target: [
+            tractFeatures[OD[i][j].d].geometry.coordinates[0][0][0][0],
+            tractFeatures[OD[i][j].d].geometry.coordinates[0][0][0][1]
+          ],
+          P: OD[i][j].P,
+          M: OD[i][j].m
+        });
+      }
+    }
+  }
+
+  return arcsArr;
 }

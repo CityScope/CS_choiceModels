@@ -66,10 +66,11 @@ export function parseCityIO(cityIOdata) {
   const siteCord = [-71.0856854, 42.3640386];
   const textArr = [];
   let counter = 0;
-  for (let i = 0; i < cityIOdata.header.spatial.ncols; i++) {
+
+  for (let i = cityIOdata.header.spatial.ncols; i > 0; i--) {
     for (let j = 0; j < cityIOdata.header.spatial.nrows; j++) {
       textArr.push({
-        coordinates: [0.0001 * j + siteCord[0], 0.0001 * i + siteCord[1]],
+        coordinates: [0.00025 * j + siteCord[0], 0.00025 * i + siteCord[1]],
         cellData: cityIOdata.grid[counter].toString()
       });
       counter++;

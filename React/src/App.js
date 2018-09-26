@@ -50,7 +50,7 @@ import { StaticMap } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 const transitionInterpolator = new LinearInterpolator(["bearing"]);
-const cityIOapi = "https://cityio.media.mit.edu/api/table/cityscopeJSwalk";
+const cityIOapi = "https://cityio.media.mit.edu/api/table/CityScopeJS";
 const ODapi = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/od";
 const INITIAL_VIEW_STATE = {
   latitude: 42.3601,
@@ -115,7 +115,7 @@ class App extends React.Component {
       const ODdata = await res.json();
       OD = ODdata;
     } catch (e) {
-      console.log(e);
+      console.log("err:", e);
     }
   };
 

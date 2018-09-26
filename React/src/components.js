@@ -1,4 +1,4 @@
-// MAKE ALL TRACTS ARCS
+// MAKE ARCS FOR ALL TRACTS
 export function allODarcs(TRACTSjson, OD) {
   console.log("MAKING ALL ARCS");
   let tractFeatures = TRACTSjson.features;

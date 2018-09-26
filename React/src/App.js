@@ -43,7 +43,8 @@ import DeckGL, {
   TextLayer,
   GeoJsonLayer,
   ArcLayer,
-  LinearInterpolator
+  LinearInterpolator,
+  FlyToInterpolator
 } from "deck.gl";
 import { StaticMap } from "react-map-gl";
 //fixes CSS missing issue
@@ -136,6 +137,23 @@ class App extends React.Component {
   _onViewStateChange = ({ viewState }) => {
     this.setState({ viewState });
   };
+
+  /////////////////////////
+
+  _goToNYC() {
+    this.setState({
+      viewState: {
+        ...this.state.viewState,
+        longitude: -74.1,
+        latitude: 40.7,
+        zoom: 14,
+        pitch: 0,
+        bearing: 0,
+        transitionDuration: 8000,
+        transitionInterpolator: new FlyToInterpolator()
+      }
+    });
+  }
 
   /////////////////////////
 
@@ -278,7 +296,7 @@ class App extends React.Component {
   };
 
   /////////////////////////
-  //different mode choices
+  //counts the different mode choices
 
   _modeCounter = () => {
     const thisArr = this.state.arcsArr;
@@ -308,6 +326,51 @@ class App extends React.Component {
     this.setState({ mode: modeArr });
   };
 
+  _mouseOnTract = () => {
+    const thisTractIndex = this.state.thisTract.index;
+    if (thisTractIndex !== -1) {
+      return (
+        <span>
+          <ul>
+            <h4>Cencus Tract #{this.state.thisTract.index}</h4>
+            <li>
+              <span style={{ color: "rgb(" + this.state.colors.car + ")" }}>
+                <span role="img" aria-label="">
+                  🚗 Driving {this.state.mode[0]}
+                </span>
+              </span>
+            </li>
+
+            <li>
+              <span style={{ color: "rgb(" + this.state.colors.bike + ")" }}>
+                <span role="img" aria-label="">
+                  🚴 Cycling {this.state.mode[1]}
+                </span>
+              </span>
+            </li>
+
+            <li>
+              <span style={{ color: "rgb(" + this.state.colors.walk + ")" }}>
+                <span role="img" aria-label="">
+                  🚶 Walking {this.state.mode[2]}
+                </span>
+              </span>
+            </li>
+
+            <li>
+              <span style={{ color: "rgb(" + this.state.colors.transit + ")" }}>
+                <span role="img" aria-label="">
+                  🚌 Transit {this.state.mode[3]}
+                </span>
+              </span>
+            </li>
+          </ul>
+        </span>
+      );
+    }
+    return null;
+  };
+
   /////////////////////////
 
   render() {
@@ -323,55 +386,7 @@ class App extends React.Component {
           characteristics and land use. The choice models are calibrated based
           on census data and the individual choices are influenced by initial
           conditions and by user interactions, as captured by the cityIO server.
-          <span>
-            <ul>
-              <h4>Cencus Tract: {this.state.thisTract.index}</h4>
-
-              <li>
-                <span style={{ color: "rgb(" + this.state.colors.car + ")" }}>
-                  <span role="img" aria-label="">
-                    🚗 Driving {this.state.mode[0]}
-                  </span>
-                </span>
-              </li>
-
-              <li>
-                <span style={{ color: "rgb(" + this.state.colors.bike + ")" }}>
-                  <span role="img" aria-label="">
-                    🚴 Cycling {this.state.mode[1]}
-                  </span>
-                </span>
-              </li>
-
-              <li>
-                <span style={{ color: "rgb(" + this.state.colors.walk + ")" }}>
-                  <span role="img" aria-label="">
-                    🚶 Walking {this.state.mode[2]}
-                  </span>
-                </span>
-              </li>
-
-              <li>
-                <span
-                  style={{ color: "rgb(" + this.state.colors.transit + ")" }}
-                >
-                  <span role="img" aria-label="">
-                    🚌 Transit {this.state.mode[3]}
-                  </span>
-                </span>
-              </li>
-            </ul>
-          </span>
-          {/* <div className="UI">
-            <input
-              type="range"
-              min="1"
-              max="100"
-              id="myRange"
-              value={this.state.value}
-              onChange={this.sliderChange}
-            />
-          </div> */}
+          <this._mouseOnTract thisTractIndex={true} />
         </div>
         <DeckGL
           layers={this._Layers()}

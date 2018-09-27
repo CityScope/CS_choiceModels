@@ -45,7 +45,7 @@ import DeckGL, {
 import { StaticMap } from "react-map-gl";
 //fixes CSS missing issue
 import "mapbox-gl/dist/mapbox-gl.css";
-import { fromValues } from "gl-matrix/src/gl-matrix/mat2d";
+// import { fromValues } from "gl-matrix/src/gl-matrix/mat2d";
 
 var TimerNPM = require("react-timer-mixin");
 

@@ -40,16 +40,14 @@ import DeckGL, {
   TextLayer,
   GeoJsonLayer,
   ArcLayer,
-  LinearInterpolator,
   FlyToInterpolator
 } from "deck.gl";
 import { StaticMap } from "react-map-gl";
 //fixes CSS missing issue
 import "mapbox-gl/dist/mapbox-gl.css";
 
-var TimerMixin = require("react-timer-mixin");
+var TimerNPM = require("react-timer-mixin");
 
-const transitionInterpolator = new LinearInterpolator(["bearing"]);
 const cityIOapi = "https://cityio.media.mit.edu/api/table/CityScopeJS";
 const ODapi = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/od";
 const GeoJsonAPI = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/geo";
@@ -93,7 +91,8 @@ class App extends React.Component {
       textArr: [],
       viewState: INITIAL_VIEW_STATE,
       cityIOtableData: null,
-      GeoJsonData: null
+      GeoJsonData: null,
+      timeInterval: 7000
     };
   }
 
@@ -101,15 +100,16 @@ class App extends React.Component {
 
   componentDidMount() {
     this.getGEOJSON();
+    this.getOD();
     //get initial cityIO
     this.getCityIO();
-    //and set interval
+    //and set interval for getting APIs
     setInterval(this.getCityIO, 2000);
     setInterval(this.getOD, 2000);
-
-    TimerMixin.setInterval(() => {
+    //start demo mode
+    TimerNPM.setInterval(() => {
       this._demoMode();
-    }, 5000);
+    }, this.state.timeInterval);
   }
 
   /////////////////////////
@@ -148,63 +148,46 @@ class App extends React.Component {
     }
   };
 
-  /////////////////////////
+  // /////////////////////////
 
   _onViewStateChange = ({ viewState }) => {
     this.setState({ viewState });
   };
 
-  /////////////////////////
-
-  _onLoad = () => {
-    this._rotateCamera();
-  };
-  /////////////////////////
-
   _demoMode = () => {
     let tractLen = this.state.GeoJsonData.features.length;
+    //get random tract for display
     let rndTract = Math.floor(this._rndLoc(0, tractLen));
-    // this._onHoverTract(this.state.GeoJsonData.features[rndTract], rndTract);
-
-    this._flyTo(
+    //call the fly method
+    this._flyToTractCentroid(
       this.state.GeoJsonData.features[rndTract].properties.centroid,
-      this._rndLoc(0, 180)
+      this._rndLoc(0, 90),
+      this._rndLoc(10, 14)
     );
+    //an obj for arcs method
+    let arcsObj = {
+      object: this.state.GeoJsonData.features[rndTract],
+      index: rndTract
+    };
+    this._arcsForSelectedTract(arcsObj);
   };
-
+  //get random in range
   _rndLoc = (min, max) => {
     return Math.random() * (max - min) + min;
   };
 
   /////////////////////////
 
-  // change bearing by 120 degrees.
-  _rotateCamera = () => {
-    // change bearing by 120 degrees.
-    const bearing = this.state.viewState.bearing;
-    this.setState({
-      viewState: {
-        ...this.state.viewState,
-        bearing,
-        transitionDuration: 100000,
-        transitionInterpolator,
-        onTransitionEnd: this._rotateCamera
-      }
-    });
-  };
-
-  /////////////////////////
-
-  _flyTo = (centroid, bearing) => {
+  _flyToTractCentroid = (centroid, bearing, zoom) => {
     this.setState({
       viewState: {
         ...this.state.viewState,
         longitude: centroid[0],
         latitude: centroid[1],
-        zoom: 12,
+        zoom: zoom,
         pitch: 45,
         bearing: bearing,
-        transitionDuration: 4000,
+        transitionDuration: Math.floor(this.state.timeInterval / 2),
         transitionInterpolator: new FlyToInterpolator()
       }
     });
@@ -212,7 +195,7 @@ class App extends React.Component {
 
   /////////////////////////
 
-  _onHoverTract({ object, index }) {
+  _arcsForSelectedTract({ object, index }) {
     this.setState({
       thisTract: { index, object }
     });
@@ -248,10 +231,10 @@ class App extends React.Component {
           //different mode choices
           switch (d.M) {
             //walk
-            case 0: //drive, cycle, walk, PT
+            case 0:
               return this.state.colors.car;
             //bike
-            case 1: //
+            case 1:
               return this.state.colors.bike;
             //car
             case 2:
@@ -264,13 +247,12 @@ class App extends React.Component {
           }
         },
 
-        getTargetColor: d => [255, 255, 255, 50],
+        getTargetColor: d => [255, 255, 255, 150],
         getStrokeWidth: d => {
           return this._strkWidth(d);
         },
         transitions: {
-          getStrokeWidth: 500,
-          getSourceColor: 500
+          getSourcePosition: this.state.timeInterval / 10
         }
       }),
       new GeoJsonLayer({
@@ -282,7 +264,7 @@ class App extends React.Component {
         filled: true,
         pickable: true,
         onHover: d => {
-          this._onHoverTract(d);
+          this._arcsForSelectedTract(d);
         },
         lineWidthMinPixels: 0.5,
         opacity: 0.5,
@@ -321,18 +303,6 @@ class App extends React.Component {
   }
 
   /////////////////////////
-
-  getInitialState = () => {
-    this.setState({ sidlerValue: 50 });
-  };
-
-  /////////////////////////
-
-  sliderChange = event => {
-    this.setState({ sidlerValue: event.target.value });
-  };
-
-  /////////////////////////
   //counts the different mode choices
 
   _modeCounter = () => {
@@ -356,6 +326,7 @@ class App extends React.Component {
         case 3:
           modeArr[3]++;
           break;
+        //
         default:
           break;
       }
@@ -363,13 +334,13 @@ class App extends React.Component {
     this.setState({ mode: modeArr });
   };
 
-  _mouseOnTract = () => {
+  _tractInfoDiv = () => {
     const thisTractIndex = this.state.thisTract.index;
     if (thisTractIndex && thisTractIndex !== -1) {
       return (
-        <span>
+        <span className="data">
           <ul>
-            <h4>Cencus Tract #{this.state.thisTract.index}</h4>
+            <h3>Cencus Tract #{this.state.thisTract.index}</h3>
             <li>
               <span style={{ color: "rgb(" + this.state.colors.car + ")" }}>
                 <span role="img" aria-label="">
@@ -419,16 +390,19 @@ class App extends React.Component {
           </div>
           <h3>MIT CityScope</h3>
           <h1>Choice Models</h1>
-          Predicts mobility choices of simulated individuals based on individual
-          characteristics and land use. The choice models are calibrated based
-          on census data and the individual choices are influenced by initial
-          conditions and by user interactions, as captured by the cityIO server.
-          <this._mouseOnTract thisTractIndex={true} />
+          'ModCho' [short for Mobility Choices] aims to predicts mobility
+          choices of simulated individuals based on thier characteristics and
+          land use. ModCho's are calibrated based on census data and the
+          individual choices are influenced by initial conditions, such as
+          income, location or age. Than, a CityScope TUI interaction captured
+          can triger new predictions based on land-use, density or proximity.
         </div>
+
+        <this._tractInfoDiv thisTractIndex={true} />
+
         <DeckGL
           layers={this._Layers()}
           viewState={this.state.viewState}
-          onLoad={this._onLoad}
           initialViewState={INITIAL_VIEW_STATE}
           onViewStateChange={this._onViewStateChange}
           controller={true}

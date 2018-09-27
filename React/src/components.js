@@ -80,3 +80,27 @@ export function allODarcs(TRACTSjson, OD) {
 
   return arcsArr;
 }
+
+/*////////////////////////
+
+_onLoad = () => {
+  this._rotateCamera();
+};
+/////////////////////////
+// const transitionInterpolator = new LinearInterpolator(["bearing"]);
+
+// change bearing by 120 degrees.
+_rotateCamera = () => {
+  // change bearing by 120 degrees.
+  const bearing = this.state.viewState.bearing;
+  this.setState({
+    viewState: {
+      ...this.state.viewState,
+      bearing,
+      transitionDuration: 100000,
+      transitionInterpolator,
+      onTransitionEnd: this._rotateCamera
+    }
+  });
+};
+*/

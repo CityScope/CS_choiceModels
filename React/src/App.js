@@ -92,7 +92,8 @@ class App extends React.Component {
       viewState: INITIAL_VIEW_STATE,
       cityIOtableData: null,
       GeoJsonData: null,
-      timeInterval: 7000
+      timeInterval: 7000,
+      slider: { type: 0, value: 0 }
     };
   }
 
@@ -142,13 +143,38 @@ class App extends React.Component {
       const cityIOdata = await res.json();
       this.setState({ cityIOtableData: cityIOdata });
       const c = this.state.cityIOtableData;
+      this.setState({ slider: this._sliderListener(c) });
+      console.log(this.state.slider);
+
       this.setState({ textArr: parseCityIO(c) });
     } catch (e) {
       console.log(e);
     }
   };
 
-  // /////////////////////////
+  _sliderListener = c => {
+    let sliderState;
+
+    for (
+      let i = c.objects.sliders[0][0];
+      i <= c.objects.sliders[0][1];
+      i = i + c.header.spatial.ncols
+    ) {
+      if (c.grid[i] !== -1) {
+        sliderState = {
+          type: c.grid[i],
+          value: map_range(i, low1, high1, low2, high2)
+        };
+      }
+
+      function map_range(value, low1, high1, low2, high2) {
+        return low2 + ((high2 - low2) * (value - low1)) / (high1 - low1);
+      }
+    }
+    return sliderState;
+  };
+
+  /////////////////////////
 
   _onViewStateChange = ({ viewState }) => {
     this.setState({ viewState });

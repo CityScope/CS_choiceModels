@@ -45,6 +45,7 @@ import DeckGL, {
 import { StaticMap } from "react-map-gl";
 //fixes CSS missing issue
 import "mapbox-gl/dist/mapbox-gl.css";
+import { fromValues } from "gl-matrix/src/gl-matrix/mat2d";
 
 var TimerNPM = require("react-timer-mixin");
 
@@ -93,7 +94,8 @@ class App extends React.Component {
       cityIOtableData: null,
       GeoJsonData: null,
       timeInterval: 7000,
-      slider: { type: 0, value: 0 }
+      slider: { type: 0, value: 0 },
+      oldSlider: { type: 0, value: 0 }
     };
   }
 
@@ -126,6 +128,8 @@ class App extends React.Component {
     }
   };
 
+  /////////////////////////
+
   getGEOJSON = async () => {
     console.log("Trying to get Geo Data");
     try {
@@ -137,38 +141,48 @@ class App extends React.Component {
     }
   };
 
+  /////////////////////////
+
   getCityIO = async () => {
     try {
       const res = await fetch(cityIOapi);
       const cityIOdata = await res.json();
       this.setState({ cityIOtableData: cityIOdata });
       const c = this.state.cityIOtableData;
+      //get the slider value
       this.setState({ slider: this._sliderListener(c) });
-      console.log(this.state.slider);
+      this._checkNewSliderState(this.state.slider);
 
+      //parse cityIO grid and set as state
       this.setState({ textArr: parseCityIO(c) });
     } catch (e) {
       console.log(e);
     }
   };
 
+  _checkNewSliderState = slider => {
+    if (JSON.stringify(slider) !== JSON.stringify(this.state.oldSlider)) {
+      this.setState({ oldSlider: this.state.slider });
+      this._demoMode(193);
+    }
+  };
+
+  /////////////////////////
+
+  //listen to slider events in cityIO
   _sliderListener = c => {
     let sliderState;
-
+    let sliderObj = c.objects.sliders[0];
     for (
-      let i = c.objects.sliders[0][0];
-      i <= c.objects.sliders[0][1];
+      let i = sliderObj[0];
+      i <= sliderObj[1];
       i = i + c.header.spatial.ncols
     ) {
       if (c.grid[i] !== -1) {
         sliderState = {
           type: c.grid[i],
-          value: map_range(i, low1, high1, low2, high2)
+          value: i
         };
-      }
-
-      function map_range(value, low1, high1, low2, high2) {
-        return low2 + ((high2 - low2) * (value - low1)) / (high1 - low1);
       }
     }
     return sliderState;
@@ -180,22 +194,38 @@ class App extends React.Component {
     this.setState({ viewState });
   };
 
-  _demoMode = () => {
-    let tractLen = this.state.GeoJsonData.features.length;
-    //get random tract for display
-    let rndTract = Math.floor(this._rndLoc(0, tractLen));
-    //call the fly method
-    this._flyToTractCentroid(
-      this.state.GeoJsonData.features[rndTract].properties.centroid,
-      this._rndLoc(0, 90),
-      this._rndLoc(10, 14)
-    );
-    //an obj for arcs method
-    let arcsObj = {
-      object: this.state.GeoJsonData.features[rndTract],
-      index: rndTract
-    };
-    this._arcsForSelectedTract(arcsObj);
+  _demoMode = cityIOtract => {
+    if (cityIOtract === 193) {
+      //call the fly method
+      this._flyToTractCentroid(
+        this.state.GeoJsonData.features[cityIOtract].properties.centroid,
+        45,
+        13
+      );
+      //an obj for arcs method
+      let arcsObj = {
+        object: this.state.GeoJsonData.features[cityIOtract],
+        index: cityIOtract
+      };
+      this._arcsForSelectedTract(arcsObj);
+      //if no new slider
+    } else {
+      let tractLen = this.state.GeoJsonData.features.length;
+      //get random tract for display
+      let rndTract = Math.floor(this._rndLoc(0, tractLen));
+      //call the fly method
+      this._flyToTractCentroid(
+        this.state.GeoJsonData.features[rndTract].properties.centroid,
+        this._rndLoc(0, 90),
+        this._rndLoc(10, 14)
+      );
+      //an obj for arcs method
+      let arcsObj = {
+        object: this.state.GeoJsonData.features[rndTract],
+        index: rndTract
+      };
+      this._arcsForSelectedTract(arcsObj);
+    }
   };
   //get random in range
   _rndLoc = (min, max) => {
@@ -238,12 +268,12 @@ class App extends React.Component {
     }
     this._modeCounter();
   }
-
   //helper to set the line width based on trips count
   _strkWidth(d) {
     let stw = d.P * 2;
     return stw;
   }
+
   /////////////////////////
 
   _Layers() {
@@ -360,6 +390,7 @@ class App extends React.Component {
     this.setState({ mode: modeArr });
   };
 
+  /////////////////////////
   _tractInfoDiv = () => {
     const thisTractIndex = this.state.thisTract.index;
     if (thisTractIndex && thisTractIndex !== -1) {

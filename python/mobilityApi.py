@@ -22,6 +22,11 @@ import pandas as pd
 from flask_cors import CORS
 import logging
 
+def healthImpacts(refRR, refMets, addMets, baseMR, minRR, N):
+    RR=refRR*(addMets/refMets)
+    RR=min(RR, minRR)
+    deltaF=(1-RR)*N*baseMR
+    return deltaF
 
 def createGrid(topLeft_lonLat, topEdge_lonLat, utm19N, wgs84, spatialData):
     #retuns the top left coordinate of each grid cell from left to right, top to bottom
@@ -63,13 +68,22 @@ logging.basicConfig(filename='./logs/'+datetime.datetime.now().strftime("%Y%d%m_
 POOL_TIME = 1 #Seconds
 utm19N=pyproj.Proj("+init=EPSG:32619")
 wgs84=pyproj.Proj("+init=EPSG:4326")
-#host='https://cityio.media.mit.edu/'
-host='http://localhost:8080/' # local port running cityio
+host='https://cityio.media.mit.edu/'
+#host='http://localhost:8080/' # local port running cityio
 cityIO_url='{}api/table/CityScopeJS'.format(host)
-sampleMultiplier=50 # each person in PUMS corresponds to about 50 actual people
-peoplePerBuilding=100
+sampleMultiplier=int(1/(0.05*0.35)) # PUMS sampling * my subsampling
+peoplePerFloor=50
 
-LU_types=['L', 'W'] # the LU types we are interested in
+#Health Impact Assessment parameters
+baseMR= 0.0090421
+RR_cycle=0.9
+RR_walk=0.89
+refMinsPerWeek_cycle=100
+refMinsPerWeek_walk=168
+minRR_walk=0.7
+minRR_cycle=0.55
+
+LU_types=["LIVE_1", "LIVE_2", "WORK_1", "WORK_2"] # the LU types we are interested in
 
 # TODO Dont use a constant here
 topLeft_lonLat={'lat':42.367867,   'lon':  -71.087913}
@@ -100,6 +114,10 @@ lastId='0'
 spatialData=cityIO_data['header']['spatial']
 typeMap=cityIO_data['header']['mapping']['type']
 revTypeMap={v:int(k) for k,v in typeMap.items()}
+#create the slider
+slider=cityIO_data['objects']['sliders'][0]
+sliderRange=list(reversed(range(slider['0'], slider['1']+1, spatialData['ncols'])))
+sliderMap={sliderRange[i]:i+1 for i in range(len(sliderRange))}
 #create the grid
 lon_grid, lat_grid=createGrid(topLeft_lonLat, topEdge_lonLat, utm19N, wgs84, spatialData)
 #find the incidency relationship between grid cells and zones
@@ -112,6 +130,7 @@ interactionZones=set([grid2Geo[g] for g in grid2Geo])
 
 lu_changes={}
 landAreas={}
+sliderHeights={lu:1 for lu in LU_types}
 #initialise the changes in land use
 for iz in interactionZones:
     lu_changes[iz]={}
@@ -151,14 +170,20 @@ def create_app():
                 #find grids of this LU and the add to the corresponding zone
                 for lu in LU_types:
                     lu_gridCells=[g for g in range(len(cityIO_data['grid'])) if cityIO_data['grid'][g] ==revTypeMap[lu]]
+                    lu_sliderCells=[g for g in lu_gridCells if g in sliderMap]
+                    lu_gridCells=[g for g in lu_gridCells if g not in sliderMap]
+                    if lu_sliderCells:
+                        sliderValue=sliderMap[lu_sliderCells[-1]] # in case there are ever more than 1, take the higher one
+                        print(lu+': '+str(sliderValue))
+                        sliderHeights[lu]=sliderValue
                     lu_zones=[grid2Geo[gc] for gc in lu_gridCells]
                     for iz in interactionZones:
-                        lu_changes[iz][lu]=sum([peoplePerBuilding for luz in lu_zones if luz==iz])
+                        lu_changes[iz][lu]=sum([sliderHeights[lu] for luz in lu_zones if luz==iz])
                  # for each interaction zone, for rows in simPop with home in this zone
                 for iz in interactionZones:                
                     # update lwBalance home and pow
-                    o_increase=lu_changes[iz]['W']-lu_changes[iz]['W_last']
-                    r_increase=lu_changes[iz]['L']-lu_changes[iz]['L_last']
+                    o_increase=peoplePerFloor*(lu_changes[iz]['WORK_1']-lu_changes[iz]['WORK_1_last'])+2*peoplePerFloor*(lu_changes[iz]['WORK_2']-lu_changes[iz]['WORK_2_last'])
+                    r_increase=peoplePerFloor*(lu_changes[iz]['LIVE_1']-lu_changes[iz]['LIVE_1_last'])+2*peoplePerFloor*(lu_changes[iz]['LIVE_2']-lu_changes[iz]['LIVE_2_last'])
                     newODensity=longSimPop.loc[longSimPop['o']==iz].iloc[0]['employmentDensity_home']+o_increase/landAreas[iz]
                     newRDensity=longSimPop.loc[longSimPop['o']==iz].iloc[0]['residentialDensity_home']+r_increase/landAreas[iz]
                     newLWBalance=-abs((newRDensity-newODensity))/(4*(newRDensity+newODensity))
@@ -193,48 +218,50 @@ def create_app():
                         # find candidate who lives in iz, copy their work location and all home and commute data
                         # find someone who doesnt live in iz but works in the same place as the candidate. update their home and commute variables
                         # this ensures the probability of a person to be selected for moving here is in proportion to their liklihood of living here- given their workplace
-                        candidatesDf=longSimPop.loc[longSimPop['o']==iz]
-                        for i in range(sampleHousingIncrease):
-                            candidateDf=candidatesDf[candidatesDf['custom_id']==candidatesDf['custom_id'].sample(n=1).values[0]] #pick one of the current residents of the interaction zone
-                            mover=longSimPop.loc[(longSimPop['d']==candidateDf.iloc[0]['d']) & (longSimPop['o']!=iz)]['custom_id'].sample(n=1).values[0] #pick someone who works in the same area as this resident but doesnt live in the interactions zone
+                        izResidents=longSimPop.loc[longSimPop['o']==iz]
+                        for i in range(sampleHousingIncrease):                            
+                            potentialMovers=[]
+                            while len(potentialMovers)==0: # in case we pick a
+                                selectedResident=izResidents[izResidents['custom_id']==izResidents['custom_id'].sample(n=1).values[0]] #pick one of the current residents of the interaction zone
+                                potentialMovers=longSimPop.loc[(longSimPop['d']==selectedResident.iloc[0]['d']) & (longSimPop['o']!=iz)]['custom_id']
+                            mover=potentialMovers.sample(n=1).values[0] #pick someone who works in the same area as this resident but doesnt live in the interactions zone
                             mask=longSimPop['custom_id']==mover
-                            for col in ['employmentDensity_home', 'lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
-                                longSimPop.loc[mask, col]=candidateDf[col].values                       
+                            for col in ['employmentDensity_home', 'residentialDensity_home','lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
+                                longSimPop.loc[mask, col]=selectedResident[col].values                       
                     elif sampleHousingIncrease<0:
 #                        print('R decreased')
                         #find list of possible movers that live in iz
                         possibleMovers=set(longSimPop.loc[(longSimPop['o']==iz)]['custom_id'].tolist())
-                        movers=random.sample(possibleMovers, -sampleHousingIncrease)
-                        for i in range(-sampleHousingIncrease):
-                            #pick  a mover from the list
-                            mover=movers[i]
-                            # find someone else who works in same place as mover but doesnt live in iz
-                            # eensures that the probability of a location being picked as the new home location is in proportion to the lilihood someone living there given- their workplace
+                        moved=0
+                        while moved<-sampleHousingIncrease:
+                            mover=random.sample(possibleMovers, 1)[0]
                             candidatesDf=longSimPop.loc[(longSimPop['o']!=iz)&(longSimPop['d']==longSimPop.loc[longSimPop['custom_id']==mover]['d'].tolist()[0])]
-                            candidateDf=candidatesDf[candidatesDf['custom_id']==candidatesDf['custom_id'].sample(n=1).values[0]]
-                            #copy other persons details to the mover
-                            mask=longSimPop['custom_id']==mover
-                            for col in ['employmentDensity_home', 'lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
-                                longSimPop.loc[mask, col]=candidateDf[col].values                            
+                            if len(candidatesDf)>0:
+                                candidateDf=candidatesDf[candidatesDf['custom_id']==candidatesDf['custom_id'].sample(n=1).values[0]]
+                                mask=longSimPop['custom_id']==mover
+                                for col in ['employmentDensity_home', 'lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
+                                    longSimPop.loc[mask, col]=candidateDf[col].values
+                                moved+=1
+                                possibleMovers.remove(mover)                            
                     for lu in LU_types:
                         lu_changes[iz][lu+'_last']=lu_changes[iz][lu]
                 longSimPop['P']=simPop_mnl.predict(longSimPop)
                 logging.info('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
-#                print('Driving: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==0)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-#                print('Cycling: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==1)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-#                print('Walking: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==2)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-#                print('PT: '+  str(sum(longSimPop.loc[(longSimPop['mode_id']==3)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+                print('Driving: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==0)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+                print('Cycling: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==1)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+                print('Walking: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==2)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+                print('PT: '+  str(sum(longSimPop.loc[(longSimPop['mode_id']==3)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
         yourThread = threading.Timer(POOL_TIME, background, args=())
         yourThread.start()        
 
     def initialise():
         # Perform initial data processing
         longSimPop['P']=simPop_mnl.predict(longSimPop)
-#        print('Driving: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==0)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-#        print('Cycling: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==1)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-#        print('Walking: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==2)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-#        print('PT: '+  str(sum(longSimPop.loc[(longSimPop['mode_id']==3)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-#        global yourThread
+        print('Driving: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==0)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+        print('Cycling: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==1)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+        print('Walking: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==2)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+        print('PT: '+  str(sum(longSimPop.loc[(longSimPop['mode_id']==3)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+        global yourThread
         # Create the initial background thread
         yourThread = threading.Timer(POOL_TIME, background, args=())
         yourThread.start()
@@ -256,14 +283,16 @@ def return_versions():
 def return_endPoints():
     return jsonify({'get O-D matrix': '/choiceModels/volpe/v1.0/od',
                     'get agents': '/choiceModels/volpe/v1.0/agents',
-                    'get geojson of regions': '/choiceModels/volpe/v1.0/geo'})
+                    'get geojson of regions': '/choiceModels/volpe/v1.0/geo',
+                    'get health and environmental impacts': '/choiceModels/volpe/v1.0/impacts'})
 
 @app.route('/choiceModels/volpe/v1.0/od', methods=['GET'])
 def get_od():
     # return a cross-tabulation of trips oriented by origin
 #    logging.info('Received O-D request.')
     ct = longSimPop.groupby(['o', 'd', 'mode_id'], as_index=False).P.sum()
-    ct=ct.loc[ct['P']>0.5]
+    ct['P']=ct.apply(lambda row: row['P']*sampleMultiplier, axis=1)
+    ct=ct.loc[ct['P']>1]
     ct['P']=ct['P'].round(2)
     ct=ct.rename(columns={"mode_id": "m"})
 #    return "{"+",".join('"'+str(o)+'":'+ct.loc[ct['o']==o, ['d', 'm', 'P']].to_json(orient='records') for o in range(len(geoId2Int)))+"}"
@@ -274,10 +303,10 @@ def get_agents():
 #    logging.info('Received agents request.')
     random.seed(0)
     # return a cross-tabulation oriented by agents
-    ct = longSimPop.groupby(['o', 'd', 'ageQ3','mode_id'], as_index=False).P.sum()
+    ct = longSimPop.groupby(['o', 'd', 'profile','mode_id'], as_index=False).P.sum()
     ct['P']=[int(p)+(random.random()<(p-int(p))) for p in ct['P']] #probabilistic round-up so no fractions of people
     ct=ct.loc[ct['P']>0]
-    ct=ct.rename(columns={"mode_id": "m", "ageQ3": "a"})
+    ct=ct.rename(columns={"mode_id": "m", "profile": "pr"})
     return ct.to_json(orient='records')
 
 @app.route('/choiceModels/volpe/v1.0/geo', methods=['GET'])
@@ -285,6 +314,19 @@ def get_geo():
 #    logging.info('Received geo request.')
     #return the subsetted geojson data
     return jsonify(geoIdGeo_subset)
+
+@app.route('/choiceModels/volpe/v1.0/impacts', methods=['GET'])
+def get_impacts():   
+#    deltaF_cycle=sum(longSimPop.apply(lambda row: healthImpacts(RR_cycle, refMinsPerWeek_cycle, row['cycle_time']*10/60, baseMR, minRR_cycle, 1)*row['P'], axis=1))
+    longSimPopCycle=longSimPop[longSimPop['mode_id']==1]
+    longSimPopWalk=longSimPop[(longSimPop['mode_id']==1)|(longSimPop['mode_id']==3)]
+    N_cycle=len(longSimPopCycle)
+    N_walk=len(longSimPopWalk)/2
+    avgCycleTimePerWeek=sum(longSimPopCycle.apply(lambda row: row['cycle_time']*10/60 * row['P'], axis=1))/N_cycle
+    avgWalkTimePerWeek=sum(longSimPopWalk.apply(lambda row: row['walk_time']*10/60 * row['P'], axis=1))/N_walk
+    deltaF_cycle=healthImpacts(RR_cycle, refMinsPerWeek_cycle, avgCycleTimePerWeek, baseMR, minRR_cycle, N_cycle)
+    deltaF_walk=healthImpacts(RR_walk, refMinsPerWeek_walk, avgWalkTimePerWeek, baseMR, minRR_walk, N_walk)
+    return jsonify({'avoided_mortality_walking':deltaF_walk, 'avoided_mortality_cycling':deltaF_cycle})
 
 @app.errorhandler(404)
 # standard error is html message- we need to ensure that the response is always json

@@ -111,6 +111,7 @@ with urllib.request.urlopen(cityIO_url) as url:
     cityIO_data=json.loads(url.read().decode()) 
 
 lastId='0'
+lastTimestamp=0
 spatialData=cityIO_data['header']['spatial']
 typeMap=cityIO_data['header']['mapping']['type']
 revTypeMap={v:int(k) for k,v in typeMap.items()}
@@ -154,6 +155,7 @@ def create_app():
         startBg=datetime.datetime.now()
         global yourThread
         global lastId
+        global lastTimestamp
         global longSimPop
         with dataLock:
             with urllib.request.urlopen(cityIO_url) as url:
@@ -162,6 +164,7 @@ def create_app():
                     cityIO_data=json.loads(url.read().decode())
                 except:
                     print("Couldn't get cityIO updates")
+            lastTimestamp=cityIO_data['meta']['timestamp']
             if cityIO_data['meta']['id']==lastId:
                 pass
             else:
@@ -292,11 +295,13 @@ def get_od():
 #    logging.info('Received O-D request.')
     ct = longSimPop.groupby(['o', 'd', 'mode_id'], as_index=False).P.sum()
     ct['P']=ct.apply(lambda row: row['P']*sampleMultiplier, axis=1)
-    ct=ct.loc[ct['P']>1]
-    ct['P']=ct['P'].round(2)
     ct=ct.rename(columns={"mode_id": "m"})
-#    return "{"+",".join('"'+str(o)+'":'+ct.loc[ct['o']==o, ['d', 'm', 'P']].to_json(orient='records') for o in range(len(geoId2Int)))+"}"
-    return '['+",".join([ct.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
+#    byOrigin=ct.groupby(['o', 'm'], as_index=False).P.sum()
+#    originJson='['+",".join([byOrigin.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
+    ct=ct.loc[ct['P']>1]
+    ct['P']=ct['P'].astype('int')
+    return "{"+",".join('"'+str(o)+'":'+ct.loc[ct['o']==o, ['d', 'm', 'P']].to_json(orient='records') for o in range(len(geoId2Int)))+"}"
+#    return '{"OD": '+odJson+', "origins": '+originJson+'}'
 
 @app.route('/choiceModels/volpe/v1.0/agents', methods=['GET'])    
 def get_agents():
@@ -327,6 +332,11 @@ def get_impacts():
     deltaF_cycle=healthImpacts(RR_cycle, refMinsPerWeek_cycle, avgCycleTimePerWeek, baseMR, minRR_cycle, N_cycle)
     deltaF_walk=healthImpacts(RR_walk, refMinsPerWeek_walk, avgWalkTimePerWeek, baseMR, minRR_walk, N_walk)
     return jsonify({'avoided_mortality_walking':deltaF_walk, 'avoided_mortality_cycling':deltaF_cycle})
+
+@app.route('/choiceModels/volpe/v1.0/ts', methods=['GET'])
+def get_ts():
+    tsObj={'Last timestamp from grid: ': datetime.datetime.fromtimestamp(int(lastTimestamp/1000)).isoformat()}
+    return jsonify(tsObj)
 
 @app.errorhandler(404)
 # standard error is html message- we need to ensure that the response is always json

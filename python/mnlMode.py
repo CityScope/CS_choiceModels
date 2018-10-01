@@ -91,7 +91,7 @@ simPop=simPop.sort_values(by='simpleMode').reset_index(drop=True)
 
 ##################### Create Long Dataframe for max likelihood estimation ############################
 ind_variables = ['employmentDensity_pow', 'residentialDensity_home', 'residentialDensity_pow','employmentDensity_home','lwBalance_home','lwBalance_pow','homeGEOID', 'workGEOID',
-                 'profile_2', 'profile_3', 'profile_4', 'profile_5' ]
+                 'profile', 'profile_2', 'profile_3', 'profile_4', 'profile_5' ]
 # Specify the variables that vary across individuals and some or all alternatives
 
 # Specify the availability variables

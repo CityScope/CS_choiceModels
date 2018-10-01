@@ -268,9 +268,9 @@ class App extends React.Component {
     }
     this._modeCounter();
   }
-  //helper to set the line width based on trips count
+  //helper to set the arcs width based on trips count
   _strkWidth(d) {
-    let stw = d.P * 2;
+    let stw = d.P / 25;
     return stw;
   }
 
@@ -362,26 +362,27 @@ class App extends React.Component {
   //counts the different mode choices
 
   _modeCounter = () => {
-    const thisArr = this.state.arcsArr;
+    const thisArcsArr = this.state.arcsArr;
     let modeArr = [0, 0, 0, 0];
-    for (let i = 0; i < thisArr.length; i++) {
-      switch (thisArr[i].M) {
+    for (let i = 0; i < thisArcsArr.length; i++) {
+      switch (thisArcsArr[i].M) {
         //walk
         case 0:
-          modeArr[0]++;
+          modeArr[0] += thisArcsArr[i].P;
           break;
         //bike
         case 1:
-          modeArr[1]++;
+          modeArr[1] += thisArcsArr[i].P;
           break;
         //car
         case 2:
-          modeArr[2]++;
+          modeArr[2] += thisArcsArr[i].P;
           break;
         //transit
         case 3:
-          modeArr[3]++;
+          modeArr[3] += thisArcsArr[i].P;
           break;
+
         //
         default:
           break;
@@ -401,7 +402,7 @@ class App extends React.Component {
             <li>
               <span style={{ color: "rgb(" + this.state.colors.car + ")" }}>
                 <span role="img" aria-label="">
-                  🚗 Driving {this.state.mode[0]}
+                  🚗 Driving {Math.floor(this.state.mode[0])}
                 </span>
               </span>
             </li>
@@ -409,7 +410,7 @@ class App extends React.Component {
             <li>
               <span style={{ color: "rgb(" + this.state.colors.bike + ")" }}>
                 <span role="img" aria-label="">
-                  🚴 Cycling {this.state.mode[1]}
+                  🚴 Cycling {Math.floor(this.state.mode[1])}
                 </span>
               </span>
             </li>
@@ -417,7 +418,7 @@ class App extends React.Component {
             <li>
               <span style={{ color: "rgb(" + this.state.colors.walk + ")" }}>
                 <span role="img" aria-label="">
-                  🚶 Walking {this.state.mode[2]}
+                  🚶 Walking {Math.floor(this.state.mode[2])}
                 </span>
               </span>
             </li>
@@ -425,7 +426,7 @@ class App extends React.Component {
             <li>
               <span style={{ color: "rgb(" + this.state.colors.transit + ")" }}>
                 <span role="img" aria-label="">
-                  🚌 Transit {this.state.mode[3]}
+                  🚌 Transit {Math.floor(this.state.mode[3])}
                 </span>
               </span>
             </li>

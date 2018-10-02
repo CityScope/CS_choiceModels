@@ -300,7 +300,8 @@ def get_od():
 #    originJson='['+",".join([byOrigin.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
     ct=ct.loc[ct['P']>1]
     ct['P']=ct['P'].astype('int')
-    return "{"+",".join('"'+str(o)+'":'+ct.loc[ct['o']==o, ['d', 'm', 'P']].to_json(orient='records') for o in range(len(geoId2Int)))+"}"
+    return '['+",".join([ct.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
+#    return "{"+",".join('"'+str(o)+'":'+ct.loc[ct['o']==o, ['d', 'm', 'P']].to_json(orient='records') for o in range(len(geoId2Int)))+"}"
 #    return '{"OD": '+odJson+', "origins": '+originJson+'}'
 
 @app.route('/choiceModels/volpe/v1.0/agents', methods=['GET'])    

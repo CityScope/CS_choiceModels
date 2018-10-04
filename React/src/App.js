@@ -70,7 +70,7 @@ const LIGHT_SETTINGS = {
 };
 
 //store a dummy OD from API in global var for start
-var OD = null;
+var OD_DATA = null;
 
 // DeckGL react component
 class App extends React.Component {
@@ -96,9 +96,10 @@ class App extends React.Component {
       GeoJsonData: null,
       slider: { type: 0, value: 0 },
       oldSlider: { type: 0, value: 0 },
-      timeInterval: 1000,
+      timeInterval: 5000,
       timer: null,
-      oldODtimeStamp: "0"
+      oldODtimeStamp: "0",
+      demoModeToggle: true
     };
   }
 
@@ -112,13 +113,6 @@ class App extends React.Component {
     //and set interval for getting APIs
     setInterval(this.getCityIO, 1000);
   }
-
-  // //start demo mode
-  // //https://www.npmjs.com/package/react-interval
-  // // https://codepen.io/nkbt/pen/ZGmpoO/
-  // this.timer = ReactInterval.setInterval(() => {
-  //   this._demoMode();
-  // }, this.state.timeInterval)
 
   /////////////////////////
 
@@ -143,10 +137,6 @@ class App extends React.Component {
       this.setState({ cityIOtableData: cityIOdata });
       const c = this.state.cityIOtableData;
 
-      //WIP check for cityIO changes
-      //get ods at the same step
-      this.getOD();
-
       //get the slider value
       this.setState({ slider: this._sliderListener(c) });
       //check if there is a change to slider so
@@ -155,6 +145,10 @@ class App extends React.Component {
 
       //parse cityIO grid and set as state
       this.setState({ textArr: parseCityIO(c) });
+
+      //WIP check for cityIO changes
+      //get ods at the same step
+      this.getOD();
     } catch (e) {
       console.log("ERROR for cityIO:", e);
     }
@@ -162,10 +156,12 @@ class App extends React.Component {
 
   _checkNewSliderState = slider => {
     if (JSON.stringify(slider) !== JSON.stringify(this.state.oldSlider)) {
+      console.log("new slider ", this.state.slider);
+
       this.setState({ oldSlider: this.state.slider });
       //don't demo if OD is empty
-      if (OD !== null) {
-        this._demoMode("volpe");
+      if (OD_DATA !== null) {
+        this._demoMode(193);
       }
     }
   };
@@ -205,9 +201,9 @@ class App extends React.Component {
         console.log("New TimeStamp, Trying to get OD Data");
         const res = await fetch(ODapi);
         const ODdata = await res.json();
-        OD = ODdata;
-        console.log("got OD data");
-        return OD;
+        OD_DATA = ODdata;
+        console.log("!!!! - Got OD data  - !!!!!");
+        return OD_DATA;
       } catch (e) {
         console.log("ERROR for OD data:", e);
       }
@@ -222,8 +218,27 @@ class App extends React.Component {
     this.setState({ viewState });
   };
 
+  /////////////////////////
+
+  //start demo mode
+  //https://www.npmjs.com/package/react-interval
+  //https://codepen.io/nkbt/pen/ZGmpoO/
+  _demoModeToggle = () => {
+    if (this.state.demoModeToggle) {
+      ReactInterval.clearInterval(this.timer);
+      console.log(this.timer);
+      this._demoMode(193);
+      this.timer = ReactInterval.setInterval(() => {
+        this._demoMode();
+      }, this.state.timeInterval);
+    } else {
+      ReactInterval.clearInterval(this.timer);
+    }
+    this.setState({ demoModeToggle: !this.state.demoModeToggle });
+  };
+
   _demoMode = cityIOtract => {
-    if (cityIOtract === "volpe") {
+    if (cityIOtract === 193) {
       //call the fly method
       this._flyToTractCentroid(
         this.state.GeoJsonData.features[cityIOtract].properties.centroid,
@@ -242,11 +257,6 @@ class App extends React.Component {
       let tractLen = this.state.GeoJsonData.features.length;
       //get random tract for display
       let rndTract = Math.floor(this._rndLoc(0, tractLen));
-
-      if (cityIOtract > 10) {
-        console.log(ReactInterval);
-        ReactInterval.clearInterval(this.timer);
-      }
 
       //call the fly method
       this._flyToTractCentroid(
@@ -296,8 +306,12 @@ class App extends React.Component {
     } else {
       const tract = this.state.thisTract.index;
       //check we already got API data
-      if (OD && this.state.GeoJsonData) {
-        const tractArcs = ODarcsForThisTract(tract, this.state.GeoJsonData, OD);
+      if (OD_DATA && this.state.GeoJsonData) {
+        const tractArcs = ODarcsForThisTract(
+          tract,
+          this.state.GeoJsonData,
+          OD_DATA
+        );
         this.setState({ arcsArr: tractArcs });
       }
     }
@@ -509,6 +523,10 @@ class App extends React.Component {
             }
           />
         </DeckGL>
+
+        <button className="button" onClick={this._demoModeToggle}>
+          {this.state.demoModeToggle ? "Start Demo" : "Stop Demo"}
+        </button>
       </div>
     );
   }

@@ -36,7 +36,7 @@ h4 {
   font-family: Roboto;
   font-weight: 100;
   color: white;
-  z-index: 10000;
+  z-index: 10;
   position: absolute;
 }
 
@@ -44,4 +44,21 @@ h4 {
   list-style-type: none;
   list-style-position: outside;
   margin-left: -40px;
+}
+
+button {
+  z-index: 10 !important;
+  position: absolute;
+  font-size: 1vw;
+  color: rgb(255, 255, 255);
+  height: 20px;
+  left: 5%;
+  top: 90%;
+  border-radius: 20px;
+  background: rgba(24, 50, 65, 0);
+  cursor: pointer;
+}
+
+button:focus {
+  outline: 0;
 }

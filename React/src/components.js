@@ -35,7 +35,7 @@ export function ODarcsForThisTract(tract, TRACTSjson, OD) {
 
 export function parseCityIO(cityIOdata) {
   if (cityIOdata == null) return;
-  //repalce with volpe actual loc
+  //replace with actual loc
   const siteCord = [-71.0856854, 42.3640386];
   const textArr = [];
   let counter = 0;

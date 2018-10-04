@@ -45,12 +45,13 @@ import DeckGL, {
 import { StaticMap } from "react-map-gl";
 //fixes CSS missing issue
 import "mapbox-gl/dist/mapbox-gl.css";
-// import { fromValues } from "gl-matrix/src/gl-matrix/mat2d";
 
-var TimerNPM = require("react-timer-mixin");
-
+//https://github.com/reactjs/react-timer-mixin
+//https://github.com/reactjs/react-timer-mixin/issues/4
+var ReactInterval = require("react-timer-mixin");
 const cityIOapi = "https://cityio.media.mit.edu/api/table/CityScopeJS";
 const ODapi = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/od";
+const ODapiTS = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/ts";
 const GeoJsonAPI = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/geo";
 const INITIAL_VIEW_STATE = {
   latitude: 42.3601,
@@ -68,7 +69,7 @@ const LIGHT_SETTINGS = {
   numberOfLights: 2
 };
 
-//store a dunmmy OD from API in global var for start
+//store a dummy OD from API in global var for start
 var OD = null;
 
 // DeckGL react component
@@ -93,40 +94,31 @@ class App extends React.Component {
       viewState: INITIAL_VIEW_STATE,
       cityIOtableData: null,
       GeoJsonData: null,
-      timeInterval: 7000,
       slider: { type: 0, value: 0 },
-      oldSlider: { type: 0, value: 0 }
+      oldSlider: { type: 0, value: 0 },
+      timeInterval: 1000,
+      timer: null,
+      oldODtimeStamp: "0"
     };
   }
 
   /////////////////////////
 
   componentDidMount() {
+    console.log("INIT: getting GEO, initial OD");
     this.getGEOJSON();
-    this.getOD();
     //get initial cityIO
     this.getCityIO();
     //and set interval for getting APIs
-    setInterval(this.getCityIO, 2000);
-    setInterval(this.getOD, 2000);
-    //start demo mode
-    TimerNPM.setInterval(() => {
-      this._demoMode();
-    }, this.state.timeInterval);
+    setInterval(this.getCityIO, 1000);
   }
 
-  /////////////////////////
-
-  getOD = async () => {
-    try {
-      const res = await fetch(ODapi);
-      const ODdata = await res.json();
-      OD = ODdata;
-      return OD;
-    } catch (e) {
-      console.log("err:", e);
-    }
-  };
+  // //start demo mode
+  // //https://www.npmjs.com/package/react-interval
+  // // https://codepen.io/nkbt/pen/ZGmpoO/
+  // this.timer = ReactInterval.setInterval(() => {
+  //   this._demoMode();
+  // }, this.state.timeInterval)
 
   /////////////////////////
 
@@ -134,10 +126,10 @@ class App extends React.Component {
     console.log("Trying to get Geo Data");
     try {
       const res = await fetch(GeoJsonAPI);
-      const d = await res.json();
+      const d = await res.json().then(console.log("got GEO"));
       this.setState({ GeoJsonData: d });
     } catch (e) {
-      console.log("err:", e);
+      console.log("ERROR for GEO:", e);
     }
   };
 
@@ -147,23 +139,34 @@ class App extends React.Component {
     try {
       const res = await fetch(cityIOapi);
       const cityIOdata = await res.json();
+
       this.setState({ cityIOtableData: cityIOdata });
       const c = this.state.cityIOtableData;
+
+      //WIP check for cityIO changes
+      //get ods at the same step
+      this.getOD();
+
       //get the slider value
       this.setState({ slider: this._sliderListener(c) });
+      //check if there is a change to slider so
+      //we'll fly to Volpe  tract
       this._checkNewSliderState(this.state.slider);
 
       //parse cityIO grid and set as state
       this.setState({ textArr: parseCityIO(c) });
     } catch (e) {
-      console.log(e);
+      console.log("ERROR for cityIO:", e);
     }
   };
 
   _checkNewSliderState = slider => {
     if (JSON.stringify(slider) !== JSON.stringify(this.state.oldSlider)) {
       this.setState({ oldSlider: this.state.slider });
-      this._demoMode(193);
+      //don't demo if OD is empty
+      if (OD !== null) {
+        this._demoMode("volpe");
+      }
     }
   };
 
@@ -190,12 +193,37 @@ class App extends React.Component {
 
   /////////////////////////
 
+  getOD = async () => {
+    console.log("getting OD timestamp");
+    //check for new OD data
+    const ts = await fetch(ODapiTS);
+    const tsJSON = await ts.json();
+
+    if (JSON.stringify(tsJSON) !== JSON.stringify(this.state.oldODtimeStamp)) {
+      this.setState({ oldODtimeStamp: tsJSON });
+      try {
+        console.log("New TimeStamp, Trying to get OD Data");
+        const res = await fetch(ODapi);
+        const ODdata = await res.json();
+        OD = ODdata;
+        console.log("got OD data");
+        return OD;
+      } catch (e) {
+        console.log("ERROR for OD data:", e);
+      }
+    } else {
+      console.log("No new OD timestamp, not fetching");
+    }
+  };
+
+  /////////////////////////
+
   _onViewStateChange = ({ viewState }) => {
     this.setState({ viewState });
   };
 
   _demoMode = cityIOtract => {
-    if (cityIOtract === 193) {
+    if (cityIOtract === "volpe") {
       //call the fly method
       this._flyToTractCentroid(
         this.state.GeoJsonData.features[cityIOtract].properties.centroid,
@@ -208,11 +236,18 @@ class App extends React.Component {
         index: cityIOtract
       };
       this._arcsForSelectedTract(arcsObj);
-      //if no new slider
+
+      //if no update to slider, keep demo
     } else {
       let tractLen = this.state.GeoJsonData.features.length;
       //get random tract for display
       let rndTract = Math.floor(this._rndLoc(0, tractLen));
+
+      if (cityIOtract > 10) {
+        console.log(ReactInterval);
+        ReactInterval.clearInterval(this.timer);
+      }
+
       //call the fly method
       this._flyToTractCentroid(
         this.state.GeoJsonData.features[rndTract].properties.centroid,
@@ -243,7 +278,7 @@ class App extends React.Component {
         zoom: zoom,
         pitch: 45,
         bearing: bearing,
-        transitionDuration: Math.floor(this.state.timeInterval / 2),
+        transitionDuration: Math.floor(this.state.timeInterval / 10),
         transitionInterpolator: new FlyToInterpolator()
       }
     });

@@ -178,7 +178,6 @@ def create_app():
                 with urllib.request.urlopen(cityIO_url) as url:
                     #get the latest json data
                     cityIO_data=json.loads(url.read().decode())
-                lastTimestamp=cityIO_data['meta']['timestamp']
                 if spatialData:
                     pass
                 else:
@@ -290,6 +289,7 @@ def create_app():
                         for lu in LU_types:
                             lu_changes[iz][lu+'_last']=lu_changes[iz][lu]
                     longSimPop['P']=simPop_mnl.predict(longSimPop)
+                    lastTimestamp=cityIO_data['meta']['timestamp']
                     logging.info('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
             except urllib.error.HTTPError:
                 print("HTTP error when getting cityIO updates")

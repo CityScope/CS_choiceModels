@@ -85,6 +85,10 @@ minRR_cycle=0.55
 
 LU_types=["LIVE_1", "LIVE_2", "WORK_1", "WORK_2"] # the LU types we are interested in
 
+lu_changes={}
+landAreas={}
+sliderHeights={lu:1 for lu in LU_types}
+
 # TODO Dont use a constant here
 topLeft_lonLat={'lat':42.367867,   'lon':  -71.087913}
 topEdge_lonLat={'lat':42.367255,   'lon':  -71.083231}# Kendall Volpe area
@@ -105,40 +109,47 @@ geoIdOrderGeojson=[f['properties']['GEOID10'] for f in geoIdGeo_subset['features
 geoId2Int={g:int(geoIdOrderGeojson.index(g)) for g in geoIdAttributes}
 longSimPop['o']=longSimPop.apply(lambda row: geoId2Int[row['homeGEOID']], axis=1).astype(object)
 longSimPop['d']=longSimPop.apply(lambda row: geoId2Int[row['workGEOID']], axis=1).astype(object)
-
-# Get the initial cityIO data from the API
-with urllib.request.urlopen(cityIO_url) as url:
-    cityIO_data=json.loads(url.read().decode()) 
+print(len(longSimPop))
 
 lastId='0'
 lastTimestamp=0
-spatialData=cityIO_data['header']['spatial']
-typeMap=cityIO_data['header']['mapping']['type']
-revTypeMap={v:int(k) for k,v in typeMap.items()}
-#create the slider
-slider=cityIO_data['objects']['sliders'][0]
-sliderRange=list(reversed(range(slider['0'], slider['1']+1, spatialData['ncols'])))
-sliderMap={sliderRange[i]:i+1 for i in range(len(sliderRange))}
-#create the grid
-lon_grid, lat_grid=createGrid(topLeft_lonLat, topEdge_lonLat, utm19N, wgs84, spatialData)
-#find the incidency relationship between grid cells and zones
-iZones=set()
-grid2Geo={}
-for i in range(len(lon_grid)):
-    # updating the list of interaction zones found so far to make next search faster- these are checked first
-    grid2Geo[i], iZones =get_geoId(lon_grid[i], lat_grid[i], geoIdGeo_subset, iZones)
-interactionZones=set([grid2Geo[g] for g in grid2Geo])
+spatialData=[]
+revTypeMap=[]
+sliderMap=[]
+interactionZones=[]
+grid2Geo=[]
 
-lu_changes={}
-landAreas={}
-sliderHeights={lu:1 for lu in LU_types}
-#initialise the changes in land use
-for iz in interactionZones:
-    lu_changes[iz]={}
-    for lu in LU_types:
-        lu_changes[iz][lu]=0
-        lu_changes[iz][lu+'_last']=0
-    landAreas[iz]=geoIdAttributes[geoIdOrderGeojson[iz]]['landArea']
+## Get the initial cityIO data from the API
+#with urllib.request.urlopen(cityIO_url) as url:
+#    cityIO_data=json.loads(url.read().decode()) 
+#
+#lastId='0'
+#lastTimestamp=0
+#spatialData=cityIO_data['header']['spatial']
+#typeMap=cityIO_data['header']['mapping']['type']
+#revTypeMap={v:int(k) for k,v in typeMap.items()}
+##create the slider
+#slider=cityIO_data['objects']['sliders'][0]
+#sliderRange=list(reversed(range(slider['0'], slider['1']+1, spatialData['ncols'])))
+#sliderMap={sliderRange[i]:i+1 for i in range(len(sliderRange))}
+##create the grid
+#lon_grid, lat_grid=createGrid(topLeft_lonLat, topEdge_lonLat, utm19N, wgs84, spatialData)
+##find the incidency relationship between grid cells and zones
+#iZones=set()
+#grid2Geo={}
+#for i in range(len(lon_grid)):
+#    # updating the list of interaction zones found so far to make next search faster- these are checked first
+#    grid2Geo[i], iZones =get_geoId(lon_grid[i], lat_grid[i], geoIdGeo_subset, iZones)
+#interactionZones=set([grid2Geo[g] for g in grid2Geo])
+
+
+##initialise the changes in land use
+#for iz in interactionZones:
+#    lu_changes[iz]={}
+#    for lu in LU_types:
+#        lu_changes[iz][lu]=0
+#        lu_changes[iz][lu+'_last']=0
+#    landAreas[iz]=geoIdAttributes[geoIdOrderGeojson[iz]]['landArea']
 # lock to control access to variable
 dataLock = threading.Lock()
 # thread handler
@@ -157,113 +168,138 @@ def create_app():
         global lastId
         global lastTimestamp
         global longSimPop
+        global spatialData
+        global revTypeMap
+        global sliderMap
+        global interactionZones
+        global grid2Geo
         with dataLock:
-            with urllib.request.urlopen(cityIO_url) as url:
-                #get the latest json data
-                try:
+            try:
+                with urllib.request.urlopen(cityIO_url) as url:
+                    #get the latest json data
                     cityIO_data=json.loads(url.read().decode())
-                except:
-                    print("Couldn't get cityIO updates")
-            lastTimestamp=cityIO_data['meta']['timestamp']
-            if cityIO_data['meta']['id']==lastId:
-                pass
-            else:
-                logging.info('change at '+str(startBg))
-                lastId=cityIO_data['meta']['id']
-                #find grids of this LU and the add to the corresponding zone
-                for lu in LU_types:
-                    lu_gridCells=[g for g in range(len(cityIO_data['grid'])) if cityIO_data['grid'][g] ==revTypeMap[lu]]
-                    lu_sliderCells=[g for g in lu_gridCells if g in sliderMap]
-                    lu_gridCells=[g for g in lu_gridCells if g not in sliderMap]
-                    if lu_sliderCells:
-                        sliderValue=sliderMap[lu_sliderCells[-1]] # in case there are ever more than 1, take the higher one
-                        print(lu+': '+str(sliderValue))
-                        sliderHeights[lu]=sliderValue
-                    lu_zones=[grid2Geo[gc] for gc in lu_gridCells]
+                lastTimestamp=cityIO_data['meta']['timestamp']
+                if spatialData:
+                    pass
+                else:
+                    # if this is the first time the grid data has been retrived, need to set up the grid spatially
+                    spatialData=cityIO_data['header']['spatial']
+                    typeMap=cityIO_data['header']['mapping']['type']
+                    revTypeMap={v:int(k) for k,v in typeMap.items()}
+                    #create the slider
+                    slider=cityIO_data['objects']['sliders'][0]
+                    sliderRange=list(reversed(range(slider['0'], slider['1']+1, spatialData['ncols'])))
+                    sliderMap={sliderRange[i]:i+1 for i in range(len(sliderRange))}
+                    #create the grid
+                    lon_grid, lat_grid=createGrid(topLeft_lonLat, topEdge_lonLat, utm19N, wgs84, spatialData)
+                    #find the incidency relationship between grid cells and zones
+                    iZones=set()
+                    grid2Geo={}
+                    for i in range(len(lon_grid)):
+                        # updating the list of interaction zones found so far to make next search faster- these are checked first
+                        grid2Geo[i], iZones =get_geoId(lon_grid[i], lat_grid[i], geoIdGeo_subset, iZones)
+                    interactionZones=set([grid2Geo[g] for g in grid2Geo])                   
+                    #initialise the changes in land use
                     for iz in interactionZones:
-                        lu_changes[iz][lu]=sum([sliderHeights[lu] for luz in lu_zones if luz==iz])
-                 # for each interaction zone, for rows in simPop with home in this zone
-                for iz in interactionZones:                
-                    # update lwBalance home and pow
-                    o_increase=peoplePerFloor*(lu_changes[iz]['WORK_1']-lu_changes[iz]['WORK_1_last'])+2*peoplePerFloor*(lu_changes[iz]['WORK_2']-lu_changes[iz]['WORK_2_last'])
-                    r_increase=peoplePerFloor*(lu_changes[iz]['LIVE_1']-lu_changes[iz]['LIVE_1_last'])+2*peoplePerFloor*(lu_changes[iz]['LIVE_2']-lu_changes[iz]['LIVE_2_last'])
-                    newODensity=longSimPop.loc[longSimPop['o']==iz].iloc[0]['employmentDensity_home']+o_increase/landAreas[iz]
-                    newRDensity=longSimPop.loc[longSimPop['o']==iz].iloc[0]['residentialDensity_home']+r_increase/landAreas[iz]
-                    newLWBalance=-abs((newRDensity-newODensity))/(4*(newRDensity+newODensity))
-                    longSimPop.loc[longSimPop['o']==iz, 'employmentDensity_home']=newODensity
-                    longSimPop.loc[longSimPop['d']==iz, 'employmentDensity_pow']=newODensity
-                    longSimPop.loc[longSimPop['o']==iz, 'residentialDensity_home']=newRDensity
-                    longSimPop.loc[longSimPop['d']==iz, 'residentialDensity_pow']=newRDensity
-                    longSimPop.loc[longSimPop['o']==iz, 'lwBalance_home']=newLWBalance
-                    longSimPop.loc[longSimPop['d']==iz, 'lwBalance_pow']=newLWBalance
-                    sampleWorkerIncrease=o_increase//sampleMultiplier
-                    sampleHousingIncrease=r_increase//sampleMultiplier
-                    # add new people for new employment capacity
-                        # if N>0, randomly duplictae N rows in longSimPop with workplace of iz- add to END
-                        # if N<0, delete LAST with this iz
-                    if sampleWorkerIncrease>0:
-#                        print('O increased')
-                        candidates=set(longSimPop[longSimPop['d']==iz]['custom_id'].values) #candidates for cloning
-                        newPeople=pd.DataFrame()
-                        for i in range(sampleWorkerIncrease):
-                            newPeople=newPeople.append(longSimPop[longSimPop['custom_id']==random.sample(candidates,1)])
-                        newPeople['custom_id']=[longSimPop.iloc[len(longSimPop)-1]['custom_id']+1+i for i in range(sampleWorkerIncrease) for j in range(4)]
-                            # new person ids
-                        longSimPop=longSimPop.append(newPeople).reset_index(drop=True)
-                    elif sampleWorkerIncrease<0:
-#                        print('O decreased')
-                        candidates=set(longSimPop[longSimPop['d']==iz]['custom_id'].values)
-                        killList=random.sample(candidates,-sampleWorkerIncrease)
-                        longSimPop=longSimPop[~longSimPop['custom_id'].isin(killList)].reset_index(drop=True)                    
-                    # redistribute people based on res capacity
-                    if sampleHousingIncrease>0:
-#                        print('R increased')
-                        # find candidate who lives in iz, copy their work location and all home and commute data
-                        # find someone who doesnt live in iz but works in the same place as the candidate. update their home and commute variables
-                        # this ensures the probability of a person to be selected for moving here is in proportion to their liklihood of living here- given their workplace
-                        izResidents=longSimPop.loc[longSimPop['o']==iz]
-                        for i in range(sampleHousingIncrease):                            
-                            potentialMovers=[]
-                            while len(potentialMovers)==0: # in case we pick a
-                                selectedResident=izResidents[izResidents['custom_id']==izResidents['custom_id'].sample(n=1).values[0]] #pick one of the current residents of the interaction zone
-                                potentialMovers=longSimPop.loc[(longSimPop['d']==selectedResident.iloc[0]['d']) & (longSimPop['o']!=iz)]['custom_id']
-                            mover=potentialMovers.sample(n=1).values[0] #pick someone who works in the same area as this resident but doesnt live in the interactions zone
-                            mask=longSimPop['custom_id']==mover
-                            for col in ['employmentDensity_home', 'residentialDensity_home','lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
-                                longSimPop.loc[mask, col]=selectedResident[col].values                       
-                    elif sampleHousingIncrease<0:
-#                        print('R decreased')
-                        #find list of possible movers that live in iz
-                        possibleMovers=set(longSimPop.loc[(longSimPop['o']==iz)]['custom_id'].tolist())
-                        moved=0
-                        while moved<-sampleHousingIncrease:
-                            mover=random.sample(possibleMovers, 1)[0]
-                            candidatesDf=longSimPop.loc[(longSimPop['o']!=iz)&(longSimPop['d']==longSimPop.loc[longSimPop['custom_id']==mover]['d'].tolist()[0])]
-                            if len(candidatesDf)>0:
-                                candidateDf=candidatesDf[candidatesDf['custom_id']==candidatesDf['custom_id'].sample(n=1).values[0]]
-                                mask=longSimPop['custom_id']==mover
-                                for col in ['employmentDensity_home', 'lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
-                                    longSimPop.loc[mask, col]=candidateDf[col].values
-                                moved+=1
-                                possibleMovers.remove(mover)                            
+                        lu_changes[iz]={}
+                        for lu in LU_types:
+                            lu_changes[iz][lu]=0
+                            lu_changes[iz][lu+'_last']=0
+                        landAreas[iz]=geoIdAttributes[geoIdOrderGeojson[iz]]['landArea']
+                if cityIO_data['meta']['id']==lastId:
+                    pass
+                else:
+                    logging.info('change at '+str(startBg))
+                    lastId=cityIO_data['meta']['id']
+                    #find grids of this LU and the add to the corresponding zone
                     for lu in LU_types:
-                        lu_changes[iz][lu+'_last']=lu_changes[iz][lu]
-                longSimPop['P']=simPop_mnl.predict(longSimPop)
-                logging.info('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
-                print('Driving: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==0)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-                print('Cycling: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==1)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-                print('Walking: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==2)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-                print('PT: '+  str(sum(longSimPop.loc[(longSimPop['mode_id']==3)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
+                        lu_gridCells=[g for g in range(len(cityIO_data['grid'])) if cityIO_data['grid'][g] ==revTypeMap[lu]]
+                        lu_sliderCells=[g for g in lu_gridCells if g in sliderMap]
+                        lu_gridCells=[g for g in lu_gridCells if g not in sliderMap]
+                        if lu_sliderCells:
+                            sliderValue=sliderMap[lu_sliderCells[-1]] # in case there are ever more than 1, take the higher one
+                            print(lu+': '+str(sliderValue))
+                            sliderHeights[lu]=sliderValue
+                        lu_zones=[grid2Geo[gc] for gc in lu_gridCells]
+                        for iz in interactionZones:
+                            lu_changes[iz][lu]=sum([sliderHeights[lu] for luz in lu_zones if luz==iz])
+                     # for each interaction zone, for rows in simPop with home in this zone
+                    for iz in interactionZones:                
+                        # update lwBalance home and pow
+                        o_increase=peoplePerFloor*(lu_changes[iz]['WORK_1']-lu_changes[iz]['WORK_1_last'])+2*peoplePerFloor*(lu_changes[iz]['WORK_2']-lu_changes[iz]['WORK_2_last'])
+                        r_increase=peoplePerFloor*(lu_changes[iz]['LIVE_1']-lu_changes[iz]['LIVE_1_last'])+2*peoplePerFloor*(lu_changes[iz]['LIVE_2']-lu_changes[iz]['LIVE_2_last'])
+                        newODensity=longSimPop.loc[longSimPop['o']==iz].iloc[0]['employmentDensity_home']+o_increase/landAreas[iz]
+                        newRDensity=longSimPop.loc[longSimPop['o']==iz].iloc[0]['residentialDensity_home']+r_increase/landAreas[iz]
+                        newLWBalance=-abs((newRDensity-newODensity))/(4*(newRDensity+newODensity))
+                        longSimPop.loc[longSimPop['o']==iz, 'employmentDensity_home']=newODensity
+                        longSimPop.loc[longSimPop['d']==iz, 'employmentDensity_pow']=newODensity
+                        longSimPop.loc[longSimPop['o']==iz, 'residentialDensity_home']=newRDensity
+                        longSimPop.loc[longSimPop['d']==iz, 'residentialDensity_pow']=newRDensity
+                        longSimPop.loc[longSimPop['o']==iz, 'lwBalance_home']=newLWBalance
+                        longSimPop.loc[longSimPop['d']==iz, 'lwBalance_pow']=newLWBalance
+                        sampleWorkerIncrease=o_increase//sampleMultiplier
+                        sampleHousingIncrease=r_increase//sampleMultiplier
+                        # add new people for new employment capacity
+                            # if N>0, randomly duplictae N rows in longSimPop with workplace of iz- add to END
+                            # if N<0, delete LAST with this iz
+                        if sampleWorkerIncrease>0:
+    #                        print('O increased')
+                            candidates=set(longSimPop[longSimPop['d']==iz]['custom_id'].values) #candidates for cloning
+                            newPeople=pd.DataFrame()
+                            for i in range(sampleWorkerIncrease):
+                                newPeople=newPeople.append(longSimPop[longSimPop['custom_id']==random.sample(candidates,1)])
+                            newPeople['custom_id']=[longSimPop.iloc[len(longSimPop)-1]['custom_id']+1+i for i in range(sampleWorkerIncrease) for j in range(4)]
+                                # new person ids
+                            longSimPop=longSimPop.append(newPeople).reset_index(drop=True)
+                        elif sampleWorkerIncrease<0:
+    #                        print('O decreased')
+                            candidates=set(longSimPop[longSimPop['d']==iz]['custom_id'].values)
+                            killList=random.sample(candidates,-sampleWorkerIncrease)
+                            longSimPop=longSimPop[~longSimPop['custom_id'].isin(killList)].reset_index(drop=True)                    
+                        # redistribute people based on res capacity
+                        if sampleHousingIncrease>0:
+    #                        print('R increased')
+                            # find candidate who lives in iz, copy their work location and all home and commute data
+                            # find someone who doesnt live in iz but works in the same place as the candidate. update their home and commute variables
+                            # this ensures the probability of a person to be selected for moving here is in proportion to their liklihood of living here- given their workplace
+                            izResidents=longSimPop.loc[longSimPop['o']==iz]
+                            for i in range(sampleHousingIncrease):                            
+                                potentialMovers=[]
+                                while len(potentialMovers)==0: # in case we pick a
+                                    selectedResident=izResidents[izResidents['custom_id']==izResidents['custom_id'].sample(n=1).values[0]] #pick one of the current residents of the interaction zone
+                                    potentialMovers=longSimPop.loc[(longSimPop['d']==selectedResident.iloc[0]['d']) & (longSimPop['o']!=iz)]['custom_id']
+                                mover=potentialMovers.sample(n=1).values[0] #pick someone who works in the same area as this resident but doesnt live in the interactions zone
+                                mask=longSimPop['custom_id']==mover
+                                for col in ['employmentDensity_home', 'residentialDensity_home','lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
+                                    longSimPop.loc[mask, col]=selectedResident[col].values                       
+                        elif sampleHousingIncrease<0:
+    #                        print('R decreased')
+                            #find list of possible movers that live in iz
+                            possibleMovers=set(longSimPop.loc[(longSimPop['o']==iz)]['custom_id'].tolist())
+                            moved=0
+                            while moved<-sampleHousingIncrease:
+                                mover=random.sample(possibleMovers, 1)[0]
+                                candidatesDf=longSimPop.loc[(longSimPop['o']!=iz)&(longSimPop['d']==longSimPop.loc[longSimPop['custom_id']==mover]['d'].tolist()[0])]
+                                if len(candidatesDf)>0:
+                                    candidateDf=candidatesDf[candidatesDf['custom_id']==candidatesDf['custom_id'].sample(n=1).values[0]]
+                                    mask=longSimPop['custom_id']==mover
+                                    for col in ['employmentDensity_home', 'lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
+                                        longSimPop.loc[mask, col]=candidateDf[col].values
+                                    moved+=1
+                                    possibleMovers.remove(mover)                            
+                        for lu in LU_types:
+                            lu_changes[iz][lu+'_last']=lu_changes[iz][lu]
+                    longSimPop['P']=simPop_mnl.predict(longSimPop)
+                    print(len(longSimPop))
+                    logging.info('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
+            except urllib.error.HTTPError:
+                print("HTTP error when getting cityIO updates")
         yourThread = threading.Timer(POOL_TIME, background, args=())
         yourThread.start()        
 
     def initialise():
         # Perform initial data processing
         longSimPop['P']=simPop_mnl.predict(longSimPop)
-        print('Driving: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==0)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-        print('Cycling: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==1)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-        print('Walking: '+ str(sum(longSimPop.loc[(longSimPop['mode_id']==2)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
-        print('PT: '+  str(sum(longSimPop.loc[(longSimPop['mode_id']==3)&(longSimPop['d']==193)]['P'])/(sum(longSimPop['d']==193)/4)))
         global yourThread
         # Create the initial background thread
         yourThread = threading.Timer(POOL_TIME, background, args=())
@@ -336,7 +372,7 @@ def get_impacts():
 
 @app.route('/choiceModels/volpe/v1.0/ts', methods=['GET'])
 def get_ts():
-    tsObj={'Last timestamp from grid: ': datetime.datetime.fromtimestamp(int(lastTimestamp/1000)).isoformat()}
+    tsObj={'Last timestamp from grid: ': datetime.datetime.fromtimestamp(int(lastTimestamp/1000)).isoformat(), 'ts': lastTimestamp}
     return jsonify(tsObj)
 
 @app.errorhandler(404)

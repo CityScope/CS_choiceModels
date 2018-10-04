@@ -290,7 +290,6 @@ def create_app():
                         for lu in LU_types:
                             lu_changes[iz][lu+'_last']=lu_changes[iz][lu]
                     longSimPop['P']=simPop_mnl.predict(longSimPop)
-                    print(len(longSimPop))
                     logging.info('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
             except urllib.error.HTTPError:
                 print("HTTP error when getting cityIO updates")
@@ -336,6 +335,10 @@ def get_od():
 #    originJson='['+",".join([byOrigin.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
     ct=ct.loc[ct['P']>1]
     ct['P']=ct['P'].astype('int')
+    print('Drive: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==0)),'P'])))
+    print('Cycle: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==1)),'P'])))
+    print('Walk: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==2)),'P'])))
+    print('PT: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==3)),'P'])))
     return '['+",".join([ct.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
 #    return "{"+",".join('"'+str(o)+'":'+ct.loc[ct['o']==o, ['d', 'm', 'P']].to_json(orient='records') for o in range(len(geoId2Int)))+"}"
 #    return '{"OD": '+odJson+', "origins": '+originJson+'}'

@@ -111,7 +111,6 @@ geoId2Int={g:int(geoIdOrderGeojson.index(g)) for g in geoIdAttributes}
 longSimPop['o']=longSimPop.apply(lambda row: geoId2Int[row['homeGEOID']], axis=1).astype(object)
 longSimPop['d']=longSimPop.apply(lambda row: geoId2Int[row['workGEOID']], axis=1).astype(object)
 longSimPop_orig=longSimPop.copy()
-print(len(longSimPop))
 
 lastId='0'
 lastTimestamp=0
@@ -220,7 +219,7 @@ def create_app():
                         lu_gridCells=[g for g in lu_gridCells if g not in sliderMap]
                         if lu_sliderCells:
                             sliderValue=sliderMap[lu_sliderCells[-1]] # in case there are ever more than 1, take the higher one
-                            print(lu+': '+str(sliderValue))
+#                            print(lu+': '+str(sliderValue))
                             sliderHeights[lu]=sliderValue
                         lu_zones=[grid2Geo[gc] for gc in lu_gridCells]
                         for iz in interactionZones:
@@ -293,7 +292,8 @@ def create_app():
                         for lu in LU_types:
                             lu_changes[iz][lu+'_last']=lu_changes[iz][lu]
                     longSimPop['P']=simPop_mnl.predict(longSimPop)
-                    print(sum(longSimPop['o']==193))
+                    print('Living in IZ: ' + str(sum(longSimPop['o']==193)))
+                    print('updating ts')
                     lastTimestamp=cityIO_data['meta']['timestamp']
                     logging.info('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
             except urllib.error.HTTPError:
@@ -340,6 +340,7 @@ def get_od():
 #    originJson='['+",".join([byOrigin.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
     ct=ct.loc[ct['P']>1]
     ct['P']=ct['P'].astype('int')
+    print('Received O-D request')
     print('Drive: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==0)),'P'])))
     print('Cycle: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==1)),'P'])))
     print('Walk: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==2)),'P'])))

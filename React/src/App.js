@@ -72,6 +72,7 @@ const LIGHT_SETTINGS = {
 
 //call chart method
 // const chart = <Chart data={data} />;
+//        {chart}
 
 ///////////////////////////////
 // DeckGL react component
@@ -498,7 +499,6 @@ class App extends React.Component {
   render() {
     return (
       <div>
-        {chart}
         <div className="info">
           <div className="logo">
             <img src={logo} style={{ width: 50, height: 50 }} alt="Logo" />

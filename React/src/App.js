@@ -71,7 +71,7 @@ const LIGHT_SETTINGS = {
 };
 
 //call chart method
-const chart = <Chart data={data} />;
+// const chart = <Chart data={data} />;
 
 ///////////////////////////////
 // DeckGL react component

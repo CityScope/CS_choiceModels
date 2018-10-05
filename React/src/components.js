@@ -91,7 +91,7 @@ export function Chart({ data }) {
     <XYPlot width={400} height={300}>
       <ArcSeries
         data={data}
-        colorDomain={[0, 1, 6]}
+        colorDomain={[1, 2, 3]}
         colorRange={["rgb(0,200,0)", "rgb(200,0,0)", "rgb(0,0,200)"]}
         colorType="linear"
       />

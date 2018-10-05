@@ -1,3 +1,7 @@
+import React from "react";
+
+import { ArcSeries, XYPlot } from "react-vis";
+
 /////////////////////////
 
 //make arcs from OD json
@@ -81,26 +85,55 @@ export function allODarcs(TRACTSjson, OD) {
   return arcsArr;
 }
 
-/*////////////////////////
+//////////////////////////////////////////////
+export function Chart({ data }) {
+  return (
+    <XYPlot width={400} height={300}>
+      <ArcSeries
+        data={data}
+        colorDomain={[0, 1, 6]}
+        colorRange={["rgb(0,200,0)", "rgb(200,0,0)", "rgb(0,0,200)"]}
+        colorType="linear"
+      />
+    </XYPlot>
+  );
+}
 
-_onLoad = () => {
-  this._rotateCamera();
-};
-/////////////////////////
-// const transitionInterpolator = new LinearInterpolator(["bearing"]);
-
-// change bearing by 120 degrees.
-_rotateCamera = () => {
-  // change bearing by 120 degrees.
-  const bearing = this.state.viewState.bearing;
-  this.setState({
-    viewState: {
-      ...this.state.viewState,
-      bearing,
-      transitionDuration: 100000,
-      transitionInterpolator,
-      onTransitionEnd: this._rotateCamera
-    }
-  });
-};
-*/
+export const data = [
+  {
+    angle0: 0,
+    angle: Math.PI / 4,
+    opacity: 0.2,
+    radius: 2,
+    radius0: 1,
+    color: 1
+  },
+  {
+    angle0: Math.PI / 4,
+    angle: (2 * Math.PI) / 4,
+    radius: 3,
+    radius0: 0,
+    color: 2
+  },
+  {
+    angle0: (2 * Math.PI) / 4,
+    angle: (3 * Math.PI) / 4,
+    radius: 2,
+    radius0: 0,
+    color: 3
+  },
+  {
+    angle0: (3 * Math.PI) / 4,
+    angle: (4 * Math.PI) / 4,
+    radius: 2,
+    radius0: 0,
+    color: 4
+  },
+  {
+    angle0: (4 * Math.PI) / 4,
+    angle: (5 * Math.PI) / 4,
+    radius: 2,
+    radius0: 0,
+    color: 5
+  }
+];

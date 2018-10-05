@@ -13,6 +13,7 @@
     "react-map-gl": "^3.3.4",
     "react-scripts": "1.1.4",
     "react-timer-mixin": "^0.13.4",
+    "react-vis": "^1.11.2",
     "typeface-roboto": "0.0.54"
   },
   "scripts": {

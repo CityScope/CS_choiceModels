@@ -32,7 +32,7 @@ https://github.com/RELNO]
 
 import React from "react";
 import "typeface-roboto";
-import { parseCityIO, ODarcsForThisTract } from "./components";
+import { parseCityIO, ODarcsForThisTract, Chart, data } from "./components";
 import "./App.css";
 //get dummy OD from init
 import logo from "./logo.png";
@@ -45,6 +45,7 @@ import DeckGL, {
 import { StaticMap } from "react-map-gl";
 //fixes CSS missing issue
 import "mapbox-gl/dist/mapbox-gl.css";
+import "../node_modules/react-vis/dist/style.css";
 
 //https://github.com/reactjs/react-timer-mixin
 //https://github.com/reactjs/react-timer-mixin/issues/4
@@ -69,22 +70,27 @@ const LIGHT_SETTINGS = {
   numberOfLights: 2
 };
 
-//store a dummy OD from API in global var for start
-var OD_DATA = null;
+//call chart method
+const chart = <Chart data={data} />;
 
+///////////////////////////////
 // DeckGL react component
 class App extends React.Component {
   constructor(props) {
     super(props);
     this.rotationStep = 0;
     this.state = {
+      // OD from API
+      OD_DATA: null,
+      //colors
       colors: {
         walk: [0, 225, 51],
         bike: [43, 209, 252],
         car: [255, 0, 217],
         transit: [227, 123, 64]
       },
-      mode: [],
+      //
+      ModesArray: [],
       sliderVal: 50,
       rotationStep: 0,
       thisTract: "",
@@ -160,7 +166,7 @@ class App extends React.Component {
 
       this.setState({ oldSlider: this.state.slider });
       //don't demo if OD is empty
-      if (OD_DATA !== null) {
+      if (this.state.OD_DATA !== null) {
         this._demoMode(193);
       }
     }
@@ -201,9 +207,9 @@ class App extends React.Component {
         console.log("New TimeStamp, Trying to get OD Data");
         const res = await fetch(ODapi);
         const ODdata = await res.json();
-        OD_DATA = ODdata;
+        this.setState({ OD_DATA: ODdata });
         console.log("!!!! - Got OD data  - !!!!!");
-        return OD_DATA;
+        return ODdata;
       } catch (e) {
         console.log("ERROR for OD data:", e);
       }
@@ -226,7 +232,6 @@ class App extends React.Component {
   _demoModeToggle = () => {
     if (this.state.demoModeToggle) {
       ReactInterval.clearInterval(this.timer);
-      console.log(this.timer);
       this._demoMode(193);
       this.timer = ReactInterval.setInterval(() => {
         this._demoMode();
@@ -262,7 +267,7 @@ class App extends React.Component {
       this._flyToTractCentroid(
         this.state.GeoJsonData.features[rndTract].properties.centroid,
         this._rndLoc(0, 90),
-        this._rndLoc(10, 14)
+        this._rndLoc(10, 13.5)
       );
       //an obj for arcs method
       let arcsObj = {
@@ -288,7 +293,7 @@ class App extends React.Component {
         zoom: zoom,
         pitch: 45,
         bearing: bearing,
-        transitionDuration: Math.floor(this.state.timeInterval / 10),
+        transitionDuration: Math.floor(this.state.timeInterval / 5),
         transitionInterpolator: new FlyToInterpolator()
       }
     });
@@ -297,20 +302,22 @@ class App extends React.Component {
   /////////////////////////
 
   _arcsForSelectedTract({ object, index }) {
-    this.setState({
-      thisTract: { index, object }
-    });
     //dont show if not on tract
     if (index < 1) {
+      console.log("not on tract");
+
       return;
     } else {
+      this.setState({
+        thisTract: { index, object }
+      });
       const tract = this.state.thisTract.index;
       //check we already got API data
-      if (OD_DATA && this.state.GeoJsonData) {
+      if (this.state.OD_DATA && this.state.GeoJsonData) {
         const tractArcs = ODarcsForThisTract(
           tract,
           this.state.GeoJsonData,
-          OD_DATA
+          this.state.OD_DATA
         );
         this.setState({ arcsArr: tractArcs });
       }
@@ -437,7 +444,7 @@ class App extends React.Component {
           break;
       }
     }
-    this.setState({ mode: modeArr });
+    this.setState({ ModesArray: modeArr });
   };
 
   /////////////////////////
@@ -451,7 +458,7 @@ class App extends React.Component {
             <li>
               <span style={{ color: "rgb(" + this.state.colors.car + ")" }}>
                 <span role="img" aria-label="">
-                  🚗 Driving {Math.floor(this.state.mode[0])}
+                  🚗 Driving {Math.floor(this.state.ModesArray[0])}
                 </span>
               </span>
             </li>
@@ -459,7 +466,7 @@ class App extends React.Component {
             <li>
               <span style={{ color: "rgb(" + this.state.colors.bike + ")" }}>
                 <span role="img" aria-label="">
-                  🚴 Cycling {Math.floor(this.state.mode[1])}
+                  🚴 Cycling {Math.floor(this.state.ModesArray[1])}
                 </span>
               </span>
             </li>
@@ -467,7 +474,7 @@ class App extends React.Component {
             <li>
               <span style={{ color: "rgb(" + this.state.colors.walk + ")" }}>
                 <span role="img" aria-label="">
-                  🚶 Walking {Math.floor(this.state.mode[2])}
+                  🚶 Walking {Math.floor(this.state.ModesArray[2])}
                 </span>
               </span>
             </li>
@@ -475,7 +482,7 @@ class App extends React.Component {
             <li>
               <span style={{ color: "rgb(" + this.state.colors.transit + ")" }}>
                 <span role="img" aria-label="">
-                  🚌 Transit {Math.floor(this.state.mode[3])}
+                  🚌 Transit {Math.floor(this.state.ModesArray[3])}
                 </span>
               </span>
             </li>
@@ -491,18 +498,19 @@ class App extends React.Component {
   render() {
     return (
       <div>
+        {chart}
         <div className="info">
           <div className="logo">
             <img src={logo} style={{ width: 50, height: 50 }} alt="Logo" />
           </div>
           <h3>MIT CityScope</h3>
           <h1>Choice Models</h1>
-          'ModCho' [short for Mobility Choices] aims to predicts mobility
-          choices of simulated individuals based on thier characteristics and
-          land use. ModCho's are calibrated based on census data and the
-          individual choices are influenced by initial conditions, such as
-          income, location or age. Than, a CityScope TUI interaction captured
-          can triger new predictions based on land-use, density or proximity.
+          'ModCho' (short for Mode Choice) aims to simulate and predict mobility
+          mode choices of individuals based on thier characteristics and land
+          use. ModCho's are calibrated based on census data and the individual
+          choices are influenced by initial conditions, such as income, location
+          or age. Than, a CityScope TUI interaction captured can triger new
+          predictions based on land-use, density or proximity.
         </div>
 
         <this._tractInfoDiv thisTractIndex={true} />

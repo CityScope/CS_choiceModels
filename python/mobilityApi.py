@@ -239,8 +239,8 @@ def create_app():
                         longSimPop.loc[longSimPop['d']==iz, 'residentialDensity_pow']=newRDensity
                         longSimPop.loc[longSimPop['o']==iz, 'lwBalance_home']=newLWBalance
                         longSimPop.loc[longSimPop['d']==iz, 'lwBalance_pow']=newLWBalance
-                        sampleWorkerIncrease=o_increase//sampleMultiplier
-                        sampleHousingIncrease=r_increase//sampleMultiplier
+                        sampleWorkerIncrease=round(o_increase/sampleMultiplier)
+                        sampleHousingIncrease=round(r_increase/sampleMultiplier)
                         # add new people for new employment capacity
                             # if N>0, randomly duplictae N rows in longSimPop with workplace of iz- add to END
                             # if N<0, delete LAST with this iz
@@ -250,7 +250,7 @@ def create_app():
                             newPeople=pd.DataFrame()
                             for i in range(sampleWorkerIncrease):
                                 newPeople=newPeople.append(longSimPop_orig[longSimPop_orig['custom_id']==random.sample(candidates,1)])
-                            newPeople['custom_id']=[longSimPop_orig.iloc[len(longSimPop_orig)-1]['custom_id']+1+i for i in range(sampleWorkerIncrease) for j in range(4)]
+                            newPeople['custom_id']=[longSimPop.iloc[len(longSimPop)-1]['custom_id']+1+i for i in range(sampleWorkerIncrease) for j in range(4)]
                             newPeople['P']=float('nan')
                                 # new person ids
                             longSimPop=longSimPop.append(newPeople).reset_index(drop=True)
@@ -265,7 +265,7 @@ def create_app():
                             # find candidate who lives in iz, copy their work location and all home and commute data
                             # find someone who doesnt live in iz but works in the same place as the candidate. update their home and commute variables
                             # this ensures the probability of a person to be selected for moving here is in proportion to their liklihood of living here- given their workplace
-                            izResidents=longSimPop_orig.loc[longSimPop['o']==iz]
+                            izResidents=longSimPop_orig.loc[longSimPop_orig['o']==iz]
                             for i in range(sampleHousingIncrease):                            
                                 potentialMovers=[]
                                 while len(potentialMovers)==0: # in case we pick a
@@ -286,13 +286,14 @@ def create_app():
                                 if len(newNeighbourDf)>0:
                                     newNeighbour=newNeighbourDf[newNeighbourDf['custom_id']==newNeighbourDf['custom_id'].sample(n=1).values[0]]
                                     mask=longSimPop['custom_id']==mover
-                                    for col in ['employmentDensity_home', 'lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
+                                    for col in ['employmentDensity_home', 'residentialDensity_home', 'lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
                                         longSimPop.loc[mask, col]=newNeighbour[col].values
                                     moved+=1
                                     possibleMovers.remove(mover)                            
                         for lu in LU_types:
                             lu_changes[iz][lu+'_last']=lu_changes[iz][lu]
                     longSimPop['P']=simPop_mnl.predict(longSimPop)
+                    print(sum(longSimPop['o']==193))
                     lastTimestamp=cityIO_data['meta']['timestamp']
                     logging.info('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
             except urllib.error.HTTPError:

@@ -340,10 +340,10 @@ def get_od():
 #    originJson='['+",".join([byOrigin.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
     ct=ct.loc[ct['P']>1]
     ct['P']=ct['P'].astype('int')
-    print('Drive: '+str(sum(ct.loc[((ct['d']==193) &(ct['m']==0)),'P'])))
-    print('Cycle: '+str(sum(ct.loc[((ct['d']==193) &(ct['m']==1)),'P'])))
-    print('Walk: '+str(sum(ct.loc[((ct['d']==193) &(ct['m']==2)),'P'])))
-    print('PT: '+str(sum(ct.loc[((ct['d']==193) &(ct['m']==3)),'P'])))
+    print('Drive: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==0)),'P'])))
+    print('Cycle: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==1)),'P'])))
+    print('Walk: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==2)),'P'])))
+    print('PT: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==3)),'P'])))
     return '['+",".join([ct.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
 #    return "{"+",".join('"'+str(o)+'":'+ct.loc[ct['o']==o, ['d', 'm', 'P']].to_json(orient='records') for o in range(len(geoId2Int)))+"}"
 #    return '{"OD": '+odJson+', "origins": '+originJson+'}'

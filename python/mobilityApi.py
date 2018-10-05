@@ -87,6 +87,7 @@ LU_types=["LIVE_1", "LIVE_2", "WORK_1", "WORK_2"] # the LU types we are interest
 
 lu_changes={}
 landAreas={}
+altRes={}
 sliderHeights={lu:1 for lu in LU_types}
 
 # TODO Dont use a constant here
@@ -109,6 +110,7 @@ geoIdOrderGeojson=[f['properties']['GEOID10'] for f in geoIdGeo_subset['features
 geoId2Int={g:int(geoIdOrderGeojson.index(g)) for g in geoIdAttributes}
 longSimPop['o']=longSimPop.apply(lambda row: geoId2Int[row['homeGEOID']], axis=1).astype(object)
 longSimPop['d']=longSimPop.apply(lambda row: geoId2Int[row['workGEOID']], axis=1).astype(object)
+longSimPop_orig=longSimPop.copy()
 print(len(longSimPop))
 
 lastId='0'
@@ -173,6 +175,7 @@ def create_app():
         global sliderMap
         global interactionZones
         global grid2Geo
+        global altRes
         with dataLock:
             try:
                 with urllib.request.urlopen(cityIO_url) as url:
@@ -204,7 +207,7 @@ def create_app():
                         for lu in LU_types:
                             lu_changes[iz][lu]=0
                             lu_changes[iz][lu+'_last']=0
-                        landAreas[iz]=geoIdAttributes[geoIdOrderGeojson[iz]]['landArea']
+                        landAreas[iz]=geoIdAttributes[geoIdOrderGeojson[iz]]['landArea']                       
                 if cityIO_data['meta']['id']==lastId:
                     pass
                 else:
@@ -243,11 +246,12 @@ def create_app():
                             # if N<0, delete LAST with this iz
                         if sampleWorkerIncrease>0:
     #                        print('O increased')
-                            candidates=set(longSimPop[longSimPop['d']==iz]['custom_id'].values) #candidates for cloning
+                            candidates=set(longSimPop_orig[longSimPop_orig['d']==iz]['custom_id'].values) #candidates for cloning
                             newPeople=pd.DataFrame()
                             for i in range(sampleWorkerIncrease):
-                                newPeople=newPeople.append(longSimPop[longSimPop['custom_id']==random.sample(candidates,1)])
-                            newPeople['custom_id']=[longSimPop.iloc[len(longSimPop)-1]['custom_id']+1+i for i in range(sampleWorkerIncrease) for j in range(4)]
+                                newPeople=newPeople.append(longSimPop_orig[longSimPop_orig['custom_id']==random.sample(candidates,1)])
+                            newPeople['custom_id']=[longSimPop_orig.iloc[len(longSimPop_orig)-1]['custom_id']+1+i for i in range(sampleWorkerIncrease) for j in range(4)]
+                            newPeople['P']=float('nan')
                                 # new person ids
                             longSimPop=longSimPop.append(newPeople).reset_index(drop=True)
                         elif sampleWorkerIncrease<0:
@@ -261,11 +265,11 @@ def create_app():
                             # find candidate who lives in iz, copy their work location and all home and commute data
                             # find someone who doesnt live in iz but works in the same place as the candidate. update their home and commute variables
                             # this ensures the probability of a person to be selected for moving here is in proportion to their liklihood of living here- given their workplace
-                            izResidents=longSimPop.loc[longSimPop['o']==iz]
+                            izResidents=longSimPop_orig.loc[longSimPop['o']==iz]
                             for i in range(sampleHousingIncrease):                            
                                 potentialMovers=[]
                                 while len(potentialMovers)==0: # in case we pick a
-                                    selectedResident=izResidents[izResidents['custom_id']==izResidents['custom_id'].sample(n=1).values[0]] #pick one of the current residents of the interaction zone
+                                    selectedResident=izResidents[izResidents['custom_id']==izResidents['custom_id'].sample(n=1).values[0]] #pick one of the original residents of the interaction zone
                                     potentialMovers=longSimPop.loc[(longSimPop['d']==selectedResident.iloc[0]['d']) & (longSimPop['o']!=iz)]['custom_id']
                                 mover=potentialMovers.sample(n=1).values[0] #pick someone who works in the same area as this resident but doesnt live in the interactions zone
                                 mask=longSimPop['custom_id']==mover
@@ -278,12 +282,12 @@ def create_app():
                             moved=0
                             while moved<-sampleHousingIncrease:
                                 mover=random.sample(possibleMovers, 1)[0]
-                                candidatesDf=longSimPop.loc[(longSimPop['o']!=iz)&(longSimPop['d']==longSimPop.loc[longSimPop['custom_id']==mover]['d'].tolist()[0])]
-                                if len(candidatesDf)>0:
-                                    candidateDf=candidatesDf[candidatesDf['custom_id']==candidatesDf['custom_id'].sample(n=1).values[0]]
+                                newNeighbourDf=longSimPop.loc[(longSimPop['o']!=iz)&(longSimPop['d']==longSimPop.loc[longSimPop['custom_id']==mover]['d'].tolist()[0])]
+                                if len(newNeighbourDf)>0:
+                                    newNeighbour=newNeighbourDf[newNeighbourDf['custom_id']==newNeighbourDf['custom_id'].sample(n=1).values[0]]
                                     mask=longSimPop['custom_id']==mover
                                     for col in ['employmentDensity_home', 'lwBalance_home', 'homeGEOID', 'cycle_time','cost', 'vehicle_time', 'walk_time', 'o']:
-                                        longSimPop.loc[mask, col]=candidateDf[col].values
+                                        longSimPop.loc[mask, col]=newNeighbour[col].values
                                     moved+=1
                                     possibleMovers.remove(mover)                            
                         for lu in LU_types:
@@ -335,10 +339,10 @@ def get_od():
 #    originJson='['+",".join([byOrigin.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
     ct=ct.loc[ct['P']>1]
     ct['P']=ct['P'].astype('int')
-    print('Drive: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==0)),'P'])))
-    print('Cycle: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==1)),'P'])))
-    print('Walk: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==2)),'P'])))
-    print('PT: '+str(sum(ct.loc[((ct['o']==193) &(ct['m']==3)),'P'])))
+    print('Drive: '+str(sum(ct.loc[((ct['d']==193) &(ct['m']==0)),'P'])))
+    print('Cycle: '+str(sum(ct.loc[((ct['d']==193) &(ct['m']==1)),'P'])))
+    print('Walk: '+str(sum(ct.loc[((ct['d']==193) &(ct['m']==2)),'P'])))
+    print('PT: '+str(sum(ct.loc[((ct['d']==193) &(ct['m']==3)),'P'])))
     return '['+",".join([ct.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
 #    return "{"+",".join('"'+str(o)+'":'+ct.loc[ct['o']==o, ['d', 'm', 'P']].to_json(orient='records') for o in range(len(geoId2Int)))+"}"
 #    return '{"OD": '+odJson+', "origins": '+originJson+'}'

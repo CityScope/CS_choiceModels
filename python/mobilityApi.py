@@ -21,12 +21,31 @@ import datetime
 import pandas as pd
 from flask_cors import CORS
 import logging
+import numpy as np
 
 def healthImpacts(refRR, refMets, addMets, baseMR, minRR, N):
     RR=refRR*(addMets/refMets)
     RR=min(RR, minRR)
     deltaF=(1-RR)*N*baseMR
     return deltaF
+
+def allImpacts(longSimPop):
+    longSimPopDrive=longSimPop[longSimPop['mode_id']==0]
+    longSimPopCycle=longSimPop[longSimPop['mode_id']==1]
+    longSimPopWalk=longSimPop[(longSimPop['mode_id']==2)|(longSimPop['mode_id']==3)]
+    longSimPopPT=longSimPop[longSimPop['mode_id']==3]
+    co2Drive=co2EmmissionsDrivePerM*sampleMultiplier*  np.dot(np.array(longSimPopDrive['dist_drive']), np.array(longSimPopDrive['P']))
+    co2PT=co2EmmissionsPTPerM*sampleMultiplier*  np.dot(np.array(longSimPopPT['dist_drive']), np.array(longSimPopPT['P']))
+    N=len(longSimPop)/4
+#    avgCycleTimePerWeek=sum(longSimPopCycle.apply(lambda row: row['cycle_time']*10/60 * row['P'], axis=1))/N
+#    avgWalkTimePerWeek=sum(longSimPopWalk.apply(lambda row: row['walk_time']*10/60 * row['P'], axis=1))/N
+    avgCycleTimePerWeek=10/60 *sum(np.multiply(np.array(longSimPopCycle['cycle_time']), np.array(longSimPopCycle['P'])))/N
+    avgWalkTimePerWeek=10/60 *sum(np.multiply(np.array(longSimPopWalk['walk_time']), np.array(longSimPopWalk['P'])))/N
+    deltaF_cycle=sampleMultiplier*healthImpacts(RR_cycle, refMinsPerWeek_cycle, avgCycleTimePerWeek, baseMR, minRR_cycle, N)
+    deltaF_walk=sampleMultiplier*healthImpacts(RR_walk, refMinsPerWeek_walk, avgWalkTimePerWeek, baseMR, minRR_walk, N)
+    co2=co2Drive+co2PT * 2 * 221 # work trips per year
+    return {'avoided_mortality_walking':deltaF_walk, 'avoided_mortality_cycling':deltaF_cycle, 'CO2_emissions_year[lbs]': co2}
+    
 
 def createGrid(topLeft_lonLat, topEdge_lonLat, utm19N, wgs84, spatialData):
     #retuns the top left coordinate of each grid cell from left to right, top to bottom
@@ -82,6 +101,9 @@ refMinsPerWeek_cycle=100
 refMinsPerWeek_walk=168
 minRR_walk=0.7
 minRR_cycle=0.55
+co2EmmissionsDrivePerM= 0.8708/0.00162
+co2EmmissionsPTPerM= 0.2359/0.00162
+
 
 LU_types=["LIVE_1", "LIVE_2", "WORK_1", "WORK_2"] # the LU types we are interested in
 
@@ -119,6 +141,7 @@ revTypeMap=[]
 sliderMap=[]
 interactionZones=[]
 grid2Geo=[]
+baselineImpacts={}
 
 ## Get the initial cityIO data from the API
 #with urllib.request.urlopen(cityIO_url) as url:
@@ -303,7 +326,9 @@ def create_app():
 
     def initialise():
         # Perform initial data processing
+        global baselineImpacts
         longSimPop['P']=simPop_mnl.predict(longSimPop)
+        baselineImpacts=allImpacts(longSimPop)
         global yourThread
         # Create the initial background thread
         yourThread = threading.Timer(POOL_TIME, background, args=())
@@ -341,17 +366,17 @@ def get_od():
     ct=ct.loc[ct['P']>1]
     ct['P']=ct['P'].astype('int')
     print('Received O-D request')
-    print('Drive: '+str(sum(ct.loc[((ct['o']==193) &(ct['d']!=193) &(ct['m']==0)),'P'])))
-    print('Cycle: '+str(sum(ct.loc[((ct['o']==193) &(ct['d']!=193)&(ct['m']==1)),'P'])))
-    print('Walk: '+str(sum(ct.loc[((ct['o']==193) &(ct['d']!=193)&(ct['m']==2)),'P'])))
-    print('PT: '+str(sum(ct.loc[((ct['o']==193) &(ct['d']!=193)&(ct['m']==3)),'P'])))
-    return '['+",".join([ct.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
+    print('Drive: '+str(sum(ct.loc[((ct['d']==193) &(ct['o']!=193) &(ct['m']==0)),'P'])))
+    print('Cycle: '+str(sum(ct.loc[((ct['d']==193) &(ct['o']!=193)&(ct['m']==1)),'P'])))
+    print('Walk: '+str(sum(ct.loc[((ct['d']==193) &(ct['o']!=193)&(ct['m']==2)),'P'])))
+    print('PT: '+str(sum(ct.loc[((ct['d']==193) &(ct['o']!=193)&(ct['m']==3)),'P'])))
+    return '['+",".join([ct.loc[ct['d']==d].to_json(orient='records') for d in range(len(geoIdOrderGeojson))])+']'
 #    return "{"+",".join('"'+str(o)+'":'+ct.loc[ct['o']==o, ['d', 'm', 'P']].to_json(orient='records') for o in range(len(geoId2Int)))+"}"
 #    return '{"OD": '+odJson+', "origins": '+originJson+'}'
 
-@app.route('/choiceModels/volpe/v1.0/od1/<int:zone_id>', methods=['GET'])
+@app.route('/choiceModels/volpe/v1.0/one_od/<int:zone_id>', methods=['GET'])
 def get_od1(zone_id):
-    longSimPop_zone=longSimPop[longSimPop['o']==zone_id]
+    longSimPop_zone=longSimPop[longSimPop['d']==zone_id]
     ct = longSimPop_zone.groupby(['o', 'd', 'mode_id'], as_index=False).P.sum()
     ct['P']=ct.apply(lambda row: row['P']*sampleMultiplier, axis=1)
     ct=ct.rename(columns={"mode_id": "m"})
@@ -381,15 +406,8 @@ def get_geo():
 @app.route('/choiceModels/volpe/v1.0/impacts', methods=['GET'])
 def get_impacts():   
 #    deltaF_cycle=sum(longSimPop.apply(lambda row: healthImpacts(RR_cycle, refMinsPerWeek_cycle, row['cycle_time']*10/60, baseMR, minRR_cycle, 1)*row['P'], axis=1))
-    longSimPopCycle=longSimPop[longSimPop['mode_id']==1]
-    longSimPopWalk=longSimPop[(longSimPop['mode_id']==1)|(longSimPop['mode_id']==3)]
-    N_cycle=len(longSimPopCycle)
-    N_walk=len(longSimPopWalk)/2
-    avgCycleTimePerWeek=sum(longSimPopCycle.apply(lambda row: row['cycle_time']*10/60 * row['P'], axis=1))/N_cycle
-    avgWalkTimePerWeek=sum(longSimPopWalk.apply(lambda row: row['walk_time']*10/60 * row['P'], axis=1))/N_walk
-    deltaF_cycle=healthImpacts(RR_cycle, refMinsPerWeek_cycle, avgCycleTimePerWeek, baseMR, minRR_cycle, N_cycle)
-    deltaF_walk=healthImpacts(RR_walk, refMinsPerWeek_walk, avgWalkTimePerWeek, baseMR, minRR_walk, N_walk)
-    return jsonify({'avoided_mortality_walking':deltaF_walk, 'avoided_mortality_cycling':deltaF_cycle})
+    impacts=allImpacts(longSimPop)
+    return jsonify({'current':impacts, 'baseline':baselineImpacts})
 
 @app.route('/choiceModels/volpe/v1.0/ts', methods=['GET'])
 def get_ts():

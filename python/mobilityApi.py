@@ -349,6 +349,18 @@ def get_od():
 #    return "{"+",".join('"'+str(o)+'":'+ct.loc[ct['o']==o, ['d', 'm', 'P']].to_json(orient='records') for o in range(len(geoId2Int)))+"}"
 #    return '{"OD": '+odJson+', "origins": '+originJson+'}'
 
+@app.route('/choiceModels/volpe/v1.0/od1/<int:zone_id>', methods=['GET'])
+def get_od1(zone_id):
+    longSimPop_zone=longSimPop[longSimPop['o']==zone_id]
+    ct = longSimPop_zone.groupby(['o', 'd', 'mode_id'], as_index=False).P.sum()
+    ct['P']=ct.apply(lambda row: row['P']*sampleMultiplier, axis=1)
+    ct=ct.rename(columns={"mode_id": "m"})
+#    byOrigin=ct.groupby(['o', 'm'], as_index=False).P.sum()
+#    originJson='['+",".join([byOrigin.loc[ct['o']==o].to_json(orient='records') for o in range(len(geoIdOrderGeojson))])+']'
+    ct=ct.loc[ct['P']>1]
+    ct['P']=ct['P'].astype('int')
+    return ct.to_json(orient='records')
+
 @app.route('/choiceModels/volpe/v1.0/agents', methods=['GET'])    
 def get_agents():
 #    logging.info('Received agents request.')

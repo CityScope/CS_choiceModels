@@ -44,7 +44,7 @@ def allImpacts(longSimPop):
     deltaF_cycle=sampleMultiplier*healthImpacts(RR_cycle, refMinsPerWeek_cycle, avgCycleTimePerWeek, baseMR, minRR_cycle, N)
     deltaF_walk=sampleMultiplier*healthImpacts(RR_walk, refMinsPerWeek_walk, avgWalkTimePerWeek, baseMR, minRR_walk, N)
     co2=co2Drive+co2PT * 2 * 221 # work trips per year
-    return {'avoided_mortality_walking':deltaF_walk, 'avoided_mortality_cycling':deltaF_cycle, 'CO2_emissions_year[lbs]': co2}
+    return {'avoided_mortality_walking':deltaF_walk, 'avoided_mortality_cycling':deltaF_cycle, 'CO2_emissions_year[tonnes]': co2}
     
 
 def createGrid(topLeft_lonLat, topEdge_lonLat, utm19N, wgs84, spatialData):
@@ -101,8 +101,12 @@ refMinsPerWeek_cycle=100
 refMinsPerWeek_walk=168
 minRR_walk=0.7
 minRR_cycle=0.55
-co2EmmissionsDrivePerM= 0.8708/0.00162
-co2EmmissionsPTPerM= 0.2359/0.00162
+co2EmmissionsDrivePerM= 0.8708/(0.00162*2000) #from lbs/mile to US tonnes/m
+co2EmmissionsPTPerM= 0.2359/(0.00162*2000)  #from lbs/mile to US tonnes/m
+#scc=42*1.21  # correcting the 2007 dollars to 2018 dollars
+## https://19january2017snapshot.epa.gov/climatechange/social-cost-carbon_.html
+#vsl=9e6 
+## https://www.nytimes.com/2011/02/17/business/economy/17regulation.html?_r=0&pagewanted=all
 
 
 LU_types=["LIVE_1", "LIVE_2", "WORK_1", "WORK_2"] # the LU types we are interested in

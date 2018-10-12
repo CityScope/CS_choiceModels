@@ -29,7 +29,7 @@ def healthImpacts(refRR, refMets, addMets, baseMR, minRR, N):
     deltaF=(1-RR)*N*baseMR
     return deltaF
 
-def allImpacts(longSimPop):
+def allImpacts(longSimPop, len_orig):
     longSimPopDrive=longSimPop[longSimPop['mode_id']==0]
     longSimPopCycle=longSimPop[longSimPop['mode_id']==1]
     longSimPopWalk=longSimPop[(longSimPop['mode_id']==2)|(longSimPop['mode_id']==3)]
@@ -41,8 +41,8 @@ def allImpacts(longSimPop):
 #    avgWalkTimePerWeek=sum(longSimPopWalk.apply(lambda row: row['walk_time']*10/60 * row['P'], axis=1))/N
     avgCycleTimePerWeek=10/60 *sum(np.multiply(np.array(longSimPopCycle['cycle_time']), np.array(longSimPopCycle['P'])))/N
     avgWalkTimePerWeek=10/60 *sum(np.multiply(np.array(longSimPopWalk['walk_time']), np.array(longSimPopWalk['P'])))/N
-    deltaF_cycle=sampleMultiplier*healthImpacts(RR_cycle, refMinsPerWeek_cycle, avgCycleTimePerWeek, baseMR, minRR_cycle, N)
-    deltaF_walk=sampleMultiplier*healthImpacts(RR_walk, refMinsPerWeek_walk, avgWalkTimePerWeek, baseMR, minRR_walk, N)
+    deltaF_cycle=sampleMultiplier*healthImpacts(RR_cycle, refMinsPerWeek_cycle, avgCycleTimePerWeek, baseMR, minRR_cycle, N)*len(longSimPop_orig)/len_orig
+    deltaF_walk=sampleMultiplier*healthImpacts(RR_walk, refMinsPerWeek_walk, avgWalkTimePerWeek, baseMR, minRR_walk, N)*len(longSimPop_orig)/len_orig
     co2=co2Drive+co2PT * 2 * 221 # work trips per year
     return {'avoided_mortality_walking':deltaF_walk, 'avoided_mortality_cycling':deltaF_cycle, 'CO2_emissions_year[tonnes]': co2}
     
@@ -332,7 +332,7 @@ def create_app():
         # Perform initial data processing
         global baselineImpacts
         longSimPop['P']=simPop_mnl.predict(longSimPop)
-        baselineImpacts=allImpacts(longSimPop)
+        baselineImpacts=allImpacts(longSimPop, len(longSimPop_orig))
         global yourThread
         # Create the initial background thread
         yourThread = threading.Timer(POOL_TIME, background, args=())
@@ -410,7 +410,7 @@ def get_geo():
 @app.route('/choiceModels/volpe/v1.0/impacts', methods=['GET'])
 def get_impacts():   
 #    deltaF_cycle=sum(longSimPop.apply(lambda row: healthImpacts(RR_cycle, refMinsPerWeek_cycle, row['cycle_time']*10/60, baseMR, minRR_cycle, 1)*row['P'], axis=1))
-    impacts=allImpacts(longSimPop)
+    impacts=allImpacts(longSimPop, len(longSimPop_orig))
     return jsonify({'current':impacts, 'baseline':baselineImpacts})
 
 @app.route('/choiceModels/volpe/v1.0/ts', methods=['GET'])

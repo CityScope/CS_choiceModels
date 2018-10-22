@@ -32,7 +32,7 @@ https://github.com/RELNO]
 
 import React from "react";
 import "typeface-roboto";
-import { parseCityIO, ODarcsForThisTract, Chart, data } from "./components";
+import { parseCityIO, ODarcsForThisTract } from "./components";
 import "./App.css";
 //get dummy OD from init
 import logo from "./logo.png";
@@ -147,7 +147,7 @@ class App extends React.Component {
       //get the slider value
       this.setState({ slider: this._sliderListener(c) });
       //check if there is a change to slider so
-      //we'll fly to Volpe  tract
+      //we'll fly to Volpe tract
       this._checkNewSliderState(this.state.slider);
 
       //parse cityIO grid and set as state
@@ -321,6 +321,9 @@ class App extends React.Component {
           this.state.OD_DATA
         );
         this.setState({ arcsArr: tractArcs });
+        // if (tract === 193) {
+        //   console.log(tractArcs);
+        // }
       }
     }
     this._modeCounter();
@@ -503,14 +506,17 @@ class App extends React.Component {
           <div className="logo">
             <img src={logo} style={{ width: 50, height: 50 }} alt="Logo" />
           </div>
-          <h3>MIT CityScope</h3>
-          <h1>Choice Models</h1>
-          'ModCho' (short for Mode Choice) aims to simulate and predict mobility
-          mode choices of individuals based on thier characteristics and land
-          use. ModCho's are calibrated based on census data and the individual
-          choices are influenced by initial conditions, such as income, location
-          or age. Than, a CityScope TUI interaction captured can triger new
-          predictions based on land-use, density or proximity.
+          <h4>MIT CityScope</h4>
+          <h1>MoCho</h1>
+          <h4>Mobility Choice Models and Societal Impact</h4>
+          <span>
+            MoCho aims to simulate and predict mobility mode choices of
+            individuals based on thier characteristics and land use. MoCho's are
+            calibrated based on census data and the individual choices are
+            influenced by initial conditions, such as income, location or age.
+            Than, a CityScope TUI interaction captured can triger new
+            predictions based on land-use, density or proximity.
+          </span>
         </div>
 
         <this._tractInfoDiv thisTractIndex={true} />

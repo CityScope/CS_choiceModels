@@ -11,7 +11,7 @@
 .info {
   left: 5vw;
   top: 10vw;
-  width: 20vw;
+  width: 30vw;
   font-family: Roboto;
   font-weight: 100;
   color: white;
@@ -20,13 +20,16 @@
 }
 
 .info h1 {
-  font-size: 3vw;
+  font-size: 5vw;
   font-weight: 100;
 }
-h2,
-h3,
-h4 {
-  font-weight: 100;
+
+.info h3 {
+  font-weight: 200;
+}
+
+.info h4 {
+  font-weight: 300;
 }
 
 .data {
@@ -46,10 +49,14 @@ h4 {
   margin-left: -40px;
 }
 
+.data h3 {
+  font-weight: 100;
+}
+
 button {
   z-index: 10 !important;
   position: absolute;
-  font-size: 0.8vw;
+  font-size: 1vw;
   color: rgba(255, 255, 255, 0.5);
   border-color: rgba(255, 255, 255, 0.5);
   height: 20px;

@@ -54,6 +54,7 @@
 }
 
 button {
+  margin-top: 1vw;
   z-index: 10 !important;
   position: absolute;
   font-size: 1vw;

@@ -2,7 +2,7 @@
   "name": "my-app",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://cityscope.media.mit.edu/CS_choiceModels",
+  "homepage": "https://cityscope.media.mit.edu/CS_choiceModels/",
   "dependencies": {
     "ajv": "^6.5.3",
     "deck.gl": "^6.0.3",
@@ -11,6 +11,7 @@
     "react": "^16.4.2",
     "react-dom": "^16.4.2",
     "react-map-gl": "^3.3.4",
+    "react-modal-video": "^1.2.1",
     "react-scripts": "1.1.4",
     "react-timer-mixin": "^0.13.4",
     "react-vis": "^1.11.2",

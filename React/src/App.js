@@ -46,6 +46,7 @@ import { StaticMap } from "react-map-gl";
 //fixes CSS missing issue
 import "mapbox-gl/dist/mapbox-gl.css";
 import "../node_modules/react-vis/dist/style.css";
+import ModalVideo from "react-modal-video";
 
 //https://github.com/reactjs/react-timer-mixin
 //https://github.com/reactjs/react-timer-mixin/issues/4
@@ -106,7 +107,9 @@ class App extends React.Component {
       timeInterval: 5000,
       timer: null,
       oldODtimeStamp: "0",
-      demoModeToggle: true
+      demoModeToggle: true,
+
+      isOpen: false
     };
   }
 
@@ -163,12 +166,14 @@ class App extends React.Component {
 
   _checkNewSliderState = slider => {
     if (JSON.stringify(slider) !== JSON.stringify(this.state.oldSlider)) {
-      console.log("new slider ", this.state.slider);
+      console.log("[!] Change to slider ", this.state.slider);
 
       this.setState({ oldSlider: this.state.slider });
       //don't demo if OD is empty
       if (this.state.OD_DATA !== null) {
-        this._demoMode(193);
+        this.setState({ demoModeToggle: true });
+        this._demoModeToggle();
+        // this._demoMode(193);
       }
     }
   };
@@ -197,7 +202,7 @@ class App extends React.Component {
   /////////////////////////
 
   getOD = async () => {
-    console.log("getting OD timestamp");
+    console.log(">>> Fetching latest 'OD' timestamp >>>");
     //check for new OD data
     const ts = await fetch(ODapiTS);
     const tsJSON = await ts.json();
@@ -205,17 +210,19 @@ class App extends React.Component {
     if (JSON.stringify(tsJSON) !== JSON.stringify(this.state.oldODtimeStamp)) {
       this.setState({ oldODtimeStamp: tsJSON });
       try {
-        console.log("New TimeStamp, Trying to get OD Data");
+        console.log("[!] New TimeStamp, Trying to get OD Data");
         const res = await fetch(ODapi);
         const ODdata = await res.json();
         this.setState({ OD_DATA: ODdata });
-        console.log("!!!! - Got OD data  - !!!!!");
+        console.log("[!] Got new OD data");
+        // if got new OD data, call the demo to start
+        this._demoModeToggle();
         return ODdata;
       } catch (e) {
         console.log("ERROR for OD data:", e);
       }
     } else {
-      console.log("No new OD timestamp, not fetching");
+      console.log("[!] No new OD timestamp, not fetching");
     }
   };
 
@@ -305,8 +312,6 @@ class App extends React.Component {
   _arcsForSelectedTract({ object, index }) {
     //dont show if not on tract
     if (index < 1) {
-      console.log("not on tract");
-
       return;
     } else {
       this.setState({
@@ -366,10 +371,10 @@ class App extends React.Component {
         getTargetColor: d => [255, 255, 255, 150],
         getStrokeWidth: d => {
           return this._strkWidth(d);
-        },
-        transitions: {
-          getSourcePosition: this.state.timeInterval / 10
         }
+        // transitions: {
+        //   getSourcePosition: this.state.timeInterval / 10
+        // }
       }),
       new GeoJsonLayer({
         id: "TRACTS",
@@ -499,6 +504,12 @@ class App extends React.Component {
 
   /////////////////////////
 
+  openModal = () => {
+    this.setState({ isOpen: true });
+  };
+
+  /////////////////////////
+
   render() {
     return (
       <div>
@@ -541,6 +552,14 @@ class App extends React.Component {
         <button className="button" onClick={this._demoModeToggle}>
           {this.state.demoModeToggle ? "Start Demo" : "Stop Demo"}
         </button>
+
+        {/* <ModalVideo
+          channel="youtube"
+          isOpen={this.state.isOpen}
+          videoId="L61p2uyiMSo"
+          onClose={() => this.setState({ isOpen: false })}
+        />
+        <button onClick={this.openModal}>Open</button> */}
       </div>
     );
   }

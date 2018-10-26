@@ -47,6 +47,9 @@ import { StaticMap } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "../node_modules/react-vis/dist/style.css";
 
+//demo timer visulazation
+import { TimeVis } from "./TimeVis";
+
 //https://github.com/reactjs/react-timer-mixin
 //https://github.com/reactjs/react-timer-mixin/issues/4
 var ReactInterval = require("react-timer-mixin");
@@ -493,6 +496,8 @@ class App extends React.Component {
       <div>
         <div className="info">
           <div className="logo">
+            {/* show the timer animation  */}
+
             <img src={logo} style={{ width: 50, height: 50 }} alt="Logo" />
           </div>
           <h4>MIT CityScope</h4>
@@ -507,9 +512,7 @@ class App extends React.Component {
             predictions based on land-use, density or proximity.
           </span>
         </div>
-
         <this._tractInfoDiv thisTractIndex={true} />
-
         <DeckGL
           layers={this._Layers()}
           viewState={this.state.viewState}
@@ -530,6 +533,7 @@ class App extends React.Component {
         <button className="button" onClick={this._demoModeToggle}>
           {this.state.demoModeToggle ? "Start Demo" : "Stop Demo"}
         </button>
+        <TimeVis />
       </div>
     );
   }

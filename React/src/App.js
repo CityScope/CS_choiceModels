@@ -46,11 +46,11 @@ import { StaticMap } from "react-map-gl";
 //fixes CSS missing issue
 import "mapbox-gl/dist/mapbox-gl.css";
 import "../node_modules/react-vis/dist/style.css";
-import ModalVideo from "react-modal-video";
 
 //https://github.com/reactjs/react-timer-mixin
 //https://github.com/reactjs/react-timer-mixin/issues/4
 var ReactInterval = require("react-timer-mixin");
+
 const cityIOapi = "https://cityio.media.mit.edu/api/table/CityScopeJS";
 const ODapi = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/od";
 const ODapiTS = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/ts";
@@ -62,6 +62,7 @@ const INITIAL_VIEW_STATE = {
   bearing: 0,
   pitch: 45
 };
+
 const LIGHT_SETTINGS = {
   lightsPosition: [-71.5, 41.5, 8000, -70.5, 43, 8000],
   ambientRatio: 0.4,
@@ -70,10 +71,6 @@ const LIGHT_SETTINGS = {
   lightsStrength: [0.8, 0.5, 0.8, 0.5],
   numberOfLights: 2
 };
-
-//call chart method
-// const chart = <Chart data={data} />;
-//        {chart}
 
 ///////////////////////////////
 // DeckGL react component
@@ -107,33 +104,29 @@ class App extends React.Component {
       timeInterval: 5000,
       timer: null,
       oldODtimeStamp: "0",
-      demoModeToggle: true,
-
-      isOpen: false
+      demoModeToggle: true
     };
   }
 
   /////////////////////////
 
   componentDidMount() {
-    console.log("INIT: getting GEO, initial OD");
     this.getGEOJSON();
     //get initial cityIO
     this.getCityIO();
     //and set interval for getting APIs
-    setInterval(this.getCityIO, 1000);
+    setInterval(this.getCityIO, 500);
   }
 
   /////////////////////////
 
   getGEOJSON = async () => {
-    console.log("Trying to get Geo Data");
     try {
       const res = await fetch(GeoJsonAPI);
-      const d = await res.json().then(console.log("got GEO"));
+      const d = await res.json();
       this.setState({ GeoJsonData: d });
     } catch (e) {
-      console.log("ERROR for GEO:", e);
+      console.log(e);
     }
   };
 
@@ -160,20 +153,17 @@ class App extends React.Component {
       //get ods at the same step
       this.getOD();
     } catch (e) {
-      console.log("ERROR for cityIO:", e);
+      console.log(e);
     }
   };
 
   _checkNewSliderState = slider => {
     if (JSON.stringify(slider) !== JSON.stringify(this.state.oldSlider)) {
-      console.log("[!] Change to slider ", this.state.slider);
-
       this.setState({ oldSlider: this.state.slider });
       //don't demo if OD is empty
       if (this.state.OD_DATA !== null) {
         this.setState({ demoModeToggle: true });
         this._demoModeToggle();
-        // this._demoMode(193);
       }
     }
   };
@@ -202,7 +192,6 @@ class App extends React.Component {
   /////////////////////////
 
   getOD = async () => {
-    console.log(">>> Fetching latest 'OD' timestamp >>>");
     //check for new OD data
     const ts = await fetch(ODapiTS);
     const tsJSON = await ts.json();
@@ -210,19 +199,17 @@ class App extends React.Component {
     if (JSON.stringify(tsJSON) !== JSON.stringify(this.state.oldODtimeStamp)) {
       this.setState({ oldODtimeStamp: tsJSON });
       try {
-        console.log("[!] New TimeStamp, Trying to get OD Data");
         const res = await fetch(ODapi);
+
         const ODdata = await res.json();
         this.setState({ OD_DATA: ODdata });
-        console.log("[!] Got new OD data");
         // if got new OD data, call the demo to start
         this._demoModeToggle();
         return ODdata;
       } catch (e) {
-        console.log("ERROR for OD data:", e);
+        console.log(e);
       }
     } else {
-      console.log("[!] No new OD timestamp, not fetching");
     }
   };
 
@@ -310,7 +297,7 @@ class App extends React.Component {
   /////////////////////////
 
   _arcsForSelectedTract({ object, index }) {
-    //dont show if not on tract
+    //don't show if not on tract
     if (index < 1) {
       return;
     } else {
@@ -326,9 +313,6 @@ class App extends React.Component {
           this.state.OD_DATA
         );
         this.setState({ arcsArr: tractArcs });
-        // if (tract === 193) {
-        //   console.log(tractArcs);
-        // }
       }
     }
     this._modeCounter();
@@ -504,12 +488,6 @@ class App extends React.Component {
 
   /////////////////////////
 
-  openModal = () => {
-    this.setState({ isOpen: true });
-  };
-
-  /////////////////////////
-
   render() {
     return (
       <div>
@@ -552,14 +530,6 @@ class App extends React.Component {
         <button className="button" onClick={this._demoModeToggle}>
           {this.state.demoModeToggle ? "Start Demo" : "Stop Demo"}
         </button>
-
-        {/* <ModalVideo
-          channel="youtube"
-          isOpen={this.state.isOpen}
-          videoId="L61p2uyiMSo"
-          onClose={() => this.setState({ isOpen: false })}
-        />
-        <button onClick={this.openModal}>Open</button> */}
       </div>
     );
   }

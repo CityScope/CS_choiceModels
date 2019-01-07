@@ -9,10 +9,11 @@
 }
 
 .info {
-  left: 5vw;
+  left: 3vw;
   top: 10vw;
   width: 30vw;
   font-family: Roboto;
+  font-size: 1.5vw;
   font-weight: 100;
   color: white;
   z-index: 10000;
@@ -54,6 +55,7 @@
 }
 
 button {
+  margin-top: 1vw;
   z-index: 10 !important;
   position: absolute;
   font-size: 1vw;

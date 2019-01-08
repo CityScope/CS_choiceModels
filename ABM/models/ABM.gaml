@@ -75,6 +75,7 @@ global {
 					create people {	
 						resType<-occat_mats[o][8, i]; // get nth res type from the appropriate csv file
 						age<-occat_mats[o][4, i];
+						hh_income<-occat_mats[o][0, i];
 						motif<-occat_mats[o][7, i];
 						education<-occat_mats[o][1, i];
 						life_cycle<-occat_mats[o][2, i];
@@ -148,6 +149,7 @@ species people skills:[moving] {
 	rgb color <- #black ;
 	int resType<-0;
 	string mode<-nil;
+	int hh_income<-6;
 	int home_zone_num<-0;
 	int work_zone_num<-0;
 	int age<-40;
@@ -207,63 +209,63 @@ species people skills:[moving] {
 	
 	action choose_mode(float trip_leg_meters, string motif, int age, int education) {
 		// based on the calibrated Decision Trees (java script produced in python)
-		if (trip_leg_meters <= 1370.51) { 
-         if (age <= 49.50) { 
-             if (trip_leg_meters <= 517.73) { 
-                 if (age <= 29.50) { 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.03, 0.54, 0.42, 0.02])];} 
-                else {// if age > 29.50 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.05, 0.07, 0.88, 0.0])];} 
+		if (trip_leg_meters <= 531.53) { 
+         if (trip_leg_meters <= 149.21) { 
+             if (education <= 1.50) { 
+                 if (hh_income <= 7.50) { 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.6, 0.0, 0.3, 0.1])];} 
+                else {// if hh_income > 7.50 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.06, 0.25, 0.62, 0.06])];} 
                 }
-            else {// if trip_leg_meters > 517.73 
-                 if (education <= 4.50) { 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.1, 0.42, 0.25, 0.23])];} 
-                else {// if education > 4.50 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.03, 0.82, 0.14, 0.02])];} 
+            else {// if education > 1.50 
+                 if (age <= 66.00) { 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.08, 0.0, 0.92, 0.0])];} 
+                else {// if age > 66.00 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.18, 0.0, 0.82, 0.0])];} 
                 }
             }
-        else {// if age > 49.50 
-             if (trip_leg_meters <= 625.52) { 
-                 if (education <= 1.50) { 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.06, 0.0, 0.23, 0.82])];} 
-                else {// if education > 1.50 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.12, 0.0, 0.88, 0.0])];} 
+        else {// if trip_leg_meters > 149.21 
+             if (motif !='HOOH') { 
+                 if (age <= 65.50) { 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.26, 0.03, 0.71, 0.0])];} 
+                else {// if age > 65.50 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.62, 0.0, 0.38, 0.0])];} 
                 }
-            else {// if trip_leg_meters > 625.52 
-                 if (trip_leg_meters <= 1220.77) { 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.43, 0.0, 0.53, 0.05])];} 
-                else {// if trip_leg_meters > 1220.77 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.78, 0.0, 0.0, 0.26])];} 
+            else {// if motif_HOOH > 0.50 
+                 if (trip_leg_meters <= 375.95) { 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.44, 0.06, 0.5, 0.01])];} 
+                else {// if trip_leg_meters > 375.95 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.78, 0.0, 0.18, 0.04])];} 
                 }
             }
         }
-    else {// if trip_leg_meters > 1370.51 
-         if (age <= 32.50) { 
-             if (motif != 'HOOH') { 
-                 if (motif != 'HOH') { 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.18, 0.0, 0.04, 0.78])];} 
-                else {// if motif_HOH > 0.50 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.57, 0.0, 0.1, 0.35])];} 
+    else {// if trip_leg_meters > 531.53 
+         if (trip_leg_meters <= 1220.24) { 
+             if (age <= 44.00) { 
+                 if (education <= 4.50) { 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.57, 0.02, 0.31, 0.1])];} 
+                else {// if education > 4.50 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.27, 0.23, 0.48, 0.03])];} 
                 }
-            else {// if motif_HOOH > 0.50 
-                 if (age <= 22.50) { 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([1.0, 0.0, 0.06, 0.0])];} 
-                else {// if age > 22.50 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.42, 0.0, 0.03, 0.58])];} 
+            else {// if age > 44.00 
+                 if (motif != 'HWH') { 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.82, 0.01, 0.16, 0.01])];} 
+                else {// if motif_HWH > 0.50 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.5, 0.0, 0.5, 0.0])];} 
                 }
             }
-        else {// if age > 32.50 
+        else {// if trip_leg_meters > 1220.24 
              if (motif != 'HWWH') { 
-                 if (education <= 4.50) { 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.62, 0.09, 0.07, 0.22])];} 
-                else {// if education > 4.50 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.31, 0.33, 0.07, 0.29])];} 
+                 if (age <= 43.50) { 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.84, 0.01, 0.03, 0.12])];} 
+                else {// if age > 43.50 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.95, 0.01, 0.02, 0.03])];} 
                 }
             else {// if motif_HWWH > 0.50 
-                 if (trip_leg_meters <= 2770.76) { 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.47, 0.0, 0.93, 0.0])];} 
-                else {// if trip_leg_meters > 2770.76 
-                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.09, 0.0, 0.0, 0.92])];} 
+                 if (age <= 67.50) { 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.77, 0.0, 0.04, 0.19])];} 
+                else {// if age > 67.50 
+                    mode<-['car', 'bike', 'walk', 'PT'][rnd_choice([0.0, 0.0, 0.0, 1.0])];} 
                 }
             }
         }

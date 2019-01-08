@@ -211,14 +211,17 @@ for cv in catVars:
 dtData=trips_nnn_nTrans[dtFeats]
 
 
-clf_mode = tree.DecisionTreeClassifier(max_depth=MAX_DEPTH, class_weight='balanced')            
+clf_mode = tree.DecisionTreeClassifier(max_depth=MAX_DEPTH
+                                       , min_samples_leaf=10
+#                                       , class_weight='balanced'
+                                       )            
 clf_mode = clf_mode.fit(np.array(dtData), np.array(trips_nnn_nTrans['simpleMode']))
 
 # visualise importance
 #plt.figure(figsize=(18, 16))    
 #plt.bar(range(len(clf_mode.feature_importances_)), clf_mode.feature_importances_)
 #plt.xticks(range(len(clf_mode.feature_importances_)), dtFeats, rotation=45)
-
+#
 # visualise actual tree
 #dot_data = tree.export_graphviz(clf_mode, out_file='results/treeModeSimple.dot',feature_names=dtFeats,  
 #                         class_names=['drive', 'cycle', 'walk', 'PT'],  

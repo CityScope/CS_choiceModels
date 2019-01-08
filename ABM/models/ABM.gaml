@@ -103,7 +103,7 @@ file geojson_zones <- file("../includes/geoIdsGAMA.geojson");
 
 species zones {
 	string zoneId; 
-	rgb color <- #black  ;
+	rgb color <- #gray  ;
 	
 	aspect base {
 		draw shape color: color ;
@@ -122,7 +122,7 @@ species buildings {
 	string type<-nil;
 	int capacity<-0;
 	int available<-0;
-	rgb color <- #gray  ;
+	rgb color <- #white  ;
 	
 	aspect base {
 		draw shape color: color ;
@@ -130,7 +130,7 @@ species buildings {
 }
 
 species people skills:[moving] {
-	rgb color <- #gray ;
+	rgb color <- #black ;
 	int resType<-0;
 	string mode<-nil;
 	int home_zone_num<-0;
@@ -152,7 +152,7 @@ species people skills:[moving] {
 	bool modeSet<-false;
 	
 	aspect base {
-		draw circle(10) color: color;
+		draw circle(30) color: color;
 	}
 	
 	reflex set_mode when: modeSet=false{
@@ -310,10 +310,19 @@ experiment mobilityAI type: gui {
 			species zones aspect: base ;
 			species road aspect: base ;
 			species buildings aspect: base ;
-			species people transparency:0.2 aspect: base ;			
-			graphics "time" {
-				draw string(current_date.hour) + "h" + string(current_date.minute) +"m" color: # black font: font("Helvetica", 25, #italic) at: {world.shape.width*0.9,world.shape.height*0.55};
-			}
+			species people transparency:0.2 aspect: base ;
+			overlay position: { 3,3 } size: { 120 #px, 140 #px } background: # gray transparency: 0.8 border: # black 
+            {	
+            		draw string(current_date.hour) + "h" + string(current_date.minute) +"m" at: { 20#px, 30#px } color: # black font: font("Helvetica", 25, #italic) perspective:false;
+  				draw "Mobility Modes" at: { 20#px, 60#px } color: #black font: font("Helvetica", 15, #bold) perspective:false;
+  				draw "Car" at: { 20#px, 75#px } color: #red font: font("Helvetica", 15, #bold ) perspective:false;
+  				draw "Bike" at: { 20#px, 90#px } color: #blue font: font("Helvetica", 15, #bold ) perspective:false;
+  				draw "Public Transit" at: { 20#px, 105#px } color: #yellow font: font("Helvetica", 15, #bold ) perspective:false;
+  				draw "Walk" at: { 20#px, 120#px } color: #green font: font("Helvetica", 15, #bold ) perspective:false;
+            }
+//			graphics "time" {
+//				draw string(current_date.hour) + "h" + string(current_date.minute) +"m" color: # black font: font("Helvetica", 25, #italic) at: {world.shape.width*0.9,world.shape.height*0.55};
+//			}
 			
 		}
 		

@@ -44,8 +44,15 @@ global {
 	int res_22<-0;
 	list res_available<-[res_00, res_01, res_02, res_10, res_11, res_12, res_20, res_21, res_22];
 	// remaining capacity for each residence type in interaction zone
+	
+	// INDICATORS
 	list res_needed<-[0,0,0,0,0,0,0,0,0];
 	// unmet demand for eah residence type in the interaction zone ( for pie chart)
+	map<string,int> modal_split <- map(['car', 'bike', 'walk', 'PT'] collect (each::0));
+	
+	map<string,rgb> color_per_mobility <- ["car"::#red, "bike"::#blue, 'walk'::#green, 'PT'::#yellow];
+	map<string,int> speed_per_mobility <- ["car"::20, "bike"::10, 'walk'::5, 'PT'::15];
+	
 	list nm_occats<-[occat_1, occat_2, occat_3, occat_4, occat_5];
 	list occat_mats<-[occat_1_mat, occat_2_mat, occat_3_mat, occat_4_mat, occat_5_mat];
 //	list sampled_occat_1<-sample(range(0,1000,1),occat_1, false); // should use length of file
@@ -62,44 +69,49 @@ global {
 		
 		// create the new people spawned from the new workplaces
 		loop o from: 0 to:length(nm_occats)-1{ // do for each occupation category
-			loop i from: 0 to: nm_occats[o]{ // create N people
-//				write occat_1_mat[4, i];
-				create people {	
-					resType<-occat_mats[o][8, i]; // get nth res type from the appropriate csv file
-					age<-occat_mats[o][4, i];
-					motif<-occat_mats[o][7, i];
-					education<-occat_mats[o][1, i];
-					life_cycle<-occat_mats[o][2, i];
-					if (res_available[resType]>0){
-						home_location<-any_location_in (one_of(buildings));
-						res_available[resType]<-res_available[resType]-1;
+			if (nm_occats[o]>0){
+				loop i from: 0 to: nm_occats[o]{ // create N people
+	//				write occat_1_mat[4, i];
+					create people {	
+						resType<-occat_mats[o][8, i]; // get nth res type from the appropriate csv file
+						age<-occat_mats[o][4, i];
+						motif<-occat_mats[o][7, i];
+						education<-occat_mats[o][1, i];
+						life_cycle<-occat_mats[o][2, i];
+						if (res_available[resType]>0){
+							home_location<-any_location_in (one_of(buildings));
+							res_available[resType]<-res_available[resType]-1;
+						}
+						//TODO better choice of home zone
+						else {
+							home_location<-any_location_in (one_of(zones));
+							res_needed[resType]<-res_needed[resType]+1;
+						}
+		          		work_location<-any_location_in (one_of(buildings));
+		          		location<-home_location;
+						start_work <- min_work_start + rnd (max_work_start - min_work_start) ;
+		          		end_work <- min_work_end + rnd (max_work_end - min_work_end) ;
+		          		objective <- "resting";	          		
 					}
-					//TODO better choice of home zone
-					else {
-						home_location<-any_location_in (one_of(zones));
-						res_needed[resType]<-res_needed[resType]+1;
-					}
-	          		work_location<-any_location_in (one_of(buildings));
-	          		location<-home_location;
-					start_work <- min_work_start + rnd (max_work_start - min_work_start) ;
-	          		end_work <- min_work_end + rnd (max_work_end - min_work_end) ;
-	          		objective <- "resting";
-	          		
-				}
+				}			
 			}			
 		}
 		
 		// Create the baseline population according to census data
 		create people from:csv_file( "../includes/agents.csv",true) with:
 			[home_zone_num::int(get("o")), 
-			work_zone_num::int(get("d"))
+			work_zone_num::int(get("d")),
+			mode::string(get("mode"))
 			]{
 				home_location<-any_location_in (zones[home_zone_num]);
 				work_location<-any_location_in (zones[work_zone_num]);
 				location<-home_location;
 				start_work <- min_work_start + rnd (max_work_start - min_work_start) ;
           		end_work <- min_work_end + rnd (max_work_end - min_work_end) ;
-          		objective <- "resting";          		
+          		objective <- "resting"; 
+          		do set_speed_color;
+          		modal_split[mode] <- modal_split[mode]+1;
+          		modeSet<-true;      		
 			}
 	}	
 }
@@ -255,6 +267,7 @@ species people skills:[moving] {
                 }
             }
         }
+        modal_split[mode] <- modal_split[mode]+1;
     }
 	
 	
@@ -297,7 +310,7 @@ experiment mobilityAI type: gui {
 	parameter "Res 3 Bed Medium Rent" var: res_21 category: "New Housing" min: 0 max: 50;
 	parameter "Res 3 Bed High Rent" var: res_22 category: "New Housing" min: 0 max: 50;
 	output {
-		display chart_display{
+		display housing{
 			chart "Housing Demand" type:pie {
 				data "Res 1 Bed Low Rent" value:res_needed[0] color:rgb(166,206,227);
 				data "Res 1 Bed Medium Rent" value:res_needed[1] color:rgb(178,223,138);
@@ -308,8 +321,15 @@ experiment mobilityAI type: gui {
 				data "Res 3 Bed Low Rent" value:res_needed[6] color:rgb(31,120,180);
 				data "Res 3 Bed Medium Rent" value:res_needed[7] color:rgb(255,127,0);
 				data "Res 3 Bed High Rent" value:res_needed[8] color:rgb(202,178,214);
-			}
-			
+			}			
+		}
+		display modes{
+			chart "Modal Split" background:#white type: pie  
+				{
+					loop i from: 0 to: length(modal_split.keys)-1	{
+					  data modal_split.keys[i] value: modal_split.values[i] color:color_per_mobility[modal_split.keys[i]];
+					}
+				}			
 		}
 		display city_display type:opengl {
 			species zones aspect: base ;
@@ -328,8 +348,9 @@ experiment mobilityAI type: gui {
 //			graphics "time" {
 //				draw string(current_date.hour) + "h" + string(current_date.minute) +"m" color: # black font: font("Helvetica", 25, #italic) at: {world.shape.width*0.9,world.shape.height*0.55};
 //			}
-			
-		}
+		
+				
+			}
 		
 		
 	}

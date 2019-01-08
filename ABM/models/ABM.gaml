@@ -1,10 +1,11 @@
 model ABM
 
 global {
-file geojson_zones <- file("../includes/geoIdsGAMA.geojson");
+	// FILES
+	file geojson_zones <- file("../includes/geoIdsGAMA.geojson");
 	file geojson_roads <- file("../includes/bostonRoads1234.geojson");
 	file geojson_grid <- file("../includes/bostonGrid2x2.geojson");
-	file occat_1_pop <- file("../includes/pop_occat_1.csv");
+	file occat_1_pop <- file("../includes/pop_occat_1.csv"); // populations to sample workers  of each type from from 
 	file occat_2_pop <- file("../includes/pop_occat_2.csv");
 	file occat_3_pop <- file("../includes/pop_occat_3.csv");
 	file occat_4_pop <- file("../includes/pop_occat_4.csv");
@@ -20,17 +21,19 @@ file geojson_zones <- file("../includes/geoIdsGAMA.geojson");
 //	int nb_people <- 100;
 	date starting_date <- date("2018-7-01T06:00:00+00:00");
 //	int current_hour update: (time / #hour) mod 24;
+	// PARAMETERS
+	//TODO  need to update logic of trip timing based on data
 	int current_hour update: 6 + (time / #hour) mod 24;
 	int min_work_start <- 6;
 	int max_work_start <- 8;
 	int min_work_end <- 16; 
 	int max_work_end <- 20; 
-	int occat_1<-0;
+	int occat_1<-0; // number of new workers of each type introduced in the interacion zone (due to new commercial space).
 	int occat_2<-0;
 	int occat_3<-0;
 	int occat_4<-0;
 	int occat_5<-0;
-	int res_00<-0;
+	int res_00<-0; // capacity of new residences of each type in the  interaction zone
 	int res_01<-0;
 	int res_02<-0;
 	int res_10<-0;
@@ -40,7 +43,9 @@ file geojson_zones <- file("../includes/geoIdsGAMA.geojson");
 	int res_21<-0;
 	int res_22<-0;
 	list res_available<-[res_00, res_01, res_02, res_10, res_11, res_12, res_20, res_21, res_22];
+	// remaining capacity for each residence type in interaction zone
 	list res_needed<-[0,0,0,0,0,0,0,0,0];
+	// unmet demand for eah residence type in the interaction zone ( for pie chart)
 	list nm_occats<-[occat_1, occat_2, occat_3, occat_4, occat_5];
 	list occat_mats<-[occat_1_mat, occat_2_mat, occat_3_mat, occat_4_mat, occat_5_mat];
 //	list sampled_occat_1<-sample(range(0,1000,1),occat_1, false); // should use length of file
@@ -48,6 +53,7 @@ file geojson_zones <- file("../includes/geoIdsGAMA.geojson");
 	graph the_graph;
 	
 	init {
+		// create graph, zones and buildings (interaction zone)
 		write 'init';
 		create road from: geojson_roads;
 		the_graph <- as_edge_graph(road);
@@ -55,7 +61,6 @@ file geojson_zones <- file("../includes/geoIdsGAMA.geojson");
 		create zones from: geojson_zones with: [zoneId::string(read ("id"))];
 		
 		// create the new people spawned from the new workplaces
-		//TODO do for each occat
 		loop o from: 0 to:length(nm_occats)-1{ // do for each occupation category
 			loop i from: 0 to: nm_occats[o]{ // create N people
 //				write occat_1_mat[4, i];
@@ -94,9 +99,7 @@ file geojson_zones <- file("../includes/geoIdsGAMA.geojson");
 				location<-home_location;
 				start_work <- min_work_start + rnd (max_work_start - min_work_start) ;
           		end_work <- min_work_end + rnd (max_work_end - min_work_end) ;
-          		objective <- "resting";
-          		
-          		
+          		objective <- "resting";          		
 			}
 	}	
 }
@@ -156,6 +159,7 @@ species people skills:[moving] {
 	}
 	
 	reflex set_mode when: modeSet=false{
+		// TODO should happen for each trip when entire motif is modelled
 		using topology(the_graph){
 		     distance <- distance_to (home_location,work_location);
 		}
@@ -190,6 +194,7 @@ species people skills:[moving] {
 	}
 	
 	action choose_mode(float trip_leg_meters, string motif, int age, int education) {
+		// based on the calibrated Decision Trees (java script produced in python)
 		if (trip_leg_meters <= 1370.51) { 
          if (age <= 49.50) { 
              if (trip_leg_meters <= 517.73) { 

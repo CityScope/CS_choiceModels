@@ -60,10 +60,16 @@ hh=hh[~hh['Rent'].isnull()]
 hh=hh[~hh['HhIncome'].isnull()]
 hh=hh[hh['HhSize']>0] # get rid of vacant units
 
-hh['RentQ'], rentBins=pd.qcut(hh['Rent'], 3, range(3), True)
+
 hh.loc[hh['Bedrooms']>2, 'Bedrooms']=3
 hh.loc[hh['Bedrooms']<1, 'Bedrooms']=1
 #hh['IncomeQ'], incomeBins=pd.qcut(hh['HhIncome'], 5, range(5), True)
+
+# get quantiles of rent dependend on the num bedrooms
+hh['RentQ']=float('nan')
+for nb in range(1,4):
+    hh.loc[hh['Bedrooms']==nb, 'RentQ'], rentBins=pd.qcut(hh.loc[hh['Bedrooms']==nb,'Rent'], 3, range(3), True)
+
 hh['IncomeQ']=hh.apply(lambda row: incomeToNHTSBands(row['HhIncome']), axis=1)
 hh.loc[hh['HhSize']>5, 'HhSize']=6
 
@@ -91,10 +97,6 @@ model.fit(trainData, estimator=MaximumLikelihoodEstimator)
 model_sample = BayesianModelSampling(model)
 pickle.dump(model_sample, open('results/sampler.p', 'wb'))
 
-#sample=model_sample.forward_sample(size=1000)
-#sample['resType']=sample.apply(lambda row: row['Bedrooms']*3+row['RentQ'], axis=1)
-#sample.to_csv('/Volumes/GoogleDrive/My Drive/Fulbright/ABM/occat_1_pop.csv', index=False)
-#
 
 # open the nhts sample and add the inferred resType requirements
 nhtsSample=pd.read_csv('results/nhtsSample.csv')

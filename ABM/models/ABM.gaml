@@ -5,6 +5,7 @@ global {
 	file geojson_zones <- file("../includes/geoIdsGAMA.geojson");
 	file geojson_roads <- file("../includes/bostonRoads1234.geojson");
 	file geojson_grid <- file("../includes/bostonGrid2x2.geojson");
+	file geojson_amenities <- file("../includes/amenitiesGBA.geojson");
 	file occat_1_pop <- file("../includes/pop_occat_1.csv"); // populations to sample workers  of each type from from 
 	file occat_2_pop <- file("../includes/pop_occat_2.csv");
 	file occat_3_pop <- file("../includes/pop_occat_3.csv");
@@ -29,9 +30,9 @@ global {
 	int max_start <- 9*60;
 //	int min_work_end <- 16; 
 //	int max_work_end <- 20; 
-	int occat_1<-0; // number of new workers of each type introduced in the interacion zone (due to new commercial space).
-	int occat_2<-0;
-	int occat_3<-0;
+	int occat_1<-23; // number of new workers of each type introduced in the interacion zone (due to new commercial space).
+	int occat_2<-25;
+	int occat_3<-20;
 	int occat_4<-0;
 	int occat_5<-0;
 	int res_00<-0; // capacity of new residences of each type in the  interaction zone
@@ -50,6 +51,7 @@ global {
 	list res_needed<-[0,0,0,0,0,0,0,0,0];
 	// unmet demand for eah residence type in the interaction zone ( for pie chart)
 	map<string,int> modal_split <- map(['car', 'bike', 'walk', 'PT'] collect (each::0));
+	int all_trips<-0;
 	
 	map<string,rgb> color_per_mobility <- ["car"::#red, "bike"::#blue, 'walk'::#green, 'PT'::#yellow];
 	map<string,int> speed_per_mobility <- ["car"::20, "bike"::10, 'walk'::5, 'PT'::15];
@@ -61,12 +63,14 @@ global {
 	graph the_graph;
 	
 	init {
-		// create graph, zones and buildings (interaction zone)
+		// create graph, zones and interaction zone
 		write 'init';
 		create road from: geojson_roads;
 		the_graph <- as_edge_graph(road);
-		create buildings from: geojson_grid;
+		create interactionZone from: geojson_grid;
 		create zones from: geojson_zones with: [zoneId::string(read ("id"))];
+		create amenities from: geojson_amenities with: [food::bool(int(read("food"))), groceries::bool(int(read("groceries"))), nightlife::bool(int(read("nightlife"))), osm_id::int(read("osm_id"))]{			
+			}
 		
 		// create the new people spawned from the new workplaces
 		loop o from: 0 to:length(nm_occats)-1{ // do for each occupation category
@@ -78,12 +82,12 @@ global {
 						age<-occat_mats[o][4, i];
 						hh_income<-occat_mats[o][0, i];
 						motif<-occat_mats[o][7, i];
-						if (motif='HWWH') or (motif='HWOWH') {work_periods<-1;}// how many times in the day the agent goes to work
+						if (motif='HWWH') or (motif='HWOWH') {work_periods<-2;}// how many times in the day the agent goes to work
 //						work_periods<- motif count (each ='W'); 
 						education<-occat_mats[o][1, i];
 						life_cycle<-occat_mats[o][2, i];
 						if (res_available[resType]>0){
-							home_location<-any_location_in (one_of(buildings));
+							home_location<-any_location_in (one_of(interactionZone));
 							res_available[resType]<-res_available[resType]-1;
 						}
 						//TODO better choice of home zone
@@ -91,7 +95,7 @@ global {
 							home_location<-any_location_in (one_of(zones));
 							res_needed[resType]<-res_needed[resType]+1;
 						}
-		          		work_location<-any_location_in (one_of(buildings));
+		          		work_location<-any_location_in (one_of(interactionZone));
 		          		location<-home_location;
 		          		if (motif = 'H'){min_start<-25;}
 						else {
@@ -140,7 +144,17 @@ species road  {
 	}
 }
 
-species buildings {
+species amenities{
+	bool food;
+	bool groceries;
+	bool nightlife;
+	int osm_id;
+	aspect base {
+		draw square(15) color: #purple;
+	}
+}
+
+species interactionZone {
 	string type<-nil;
 	int capacity<-0;
 	int available<-0;
@@ -213,8 +227,8 @@ species people skills:[moving] {
 				locations[i]<-work_location;
 			}
 			else if (motif at i='O'){				
-				// TODO use amenities shape file
-				locations[i]<-any_location_in (one_of(zones));
+				// pick random location with 1000m in each axis and pick the closet amenity
+				locations[i]<- (amenities with_min_of(each distance_to({locations[i-1].x+rnd(-500,500), locations[i-1].y+rnd(-1000,1000)}))).location;
 			}
 		}
 		modes<-list_with(num_locs-1, nil);
@@ -293,6 +307,7 @@ species people skills:[moving] {
     
     action set_speed_color{
     		modal_split[mode] <- modal_split[mode]+1;
+    		all_trips<-all_trips+1;
         if mode='car'{
 			speed<-20.0 #km/#h;
 			color<-#red;
@@ -330,40 +345,41 @@ experiment mobilityAI type: gui {
 	parameter "Res 3 Bed Medium Rent" var: res_21 category: "New Housing" min: 0 max: 50;
 	parameter "Res 3 Bed High Rent" var: res_22 category: "New Housing" min: 0 max: 50;
 	output {
-//		display housing refresh:every(1000){
-//			chart "Housing Demand" type:pie {
-//				data "Res 1 Bed Low Rent" value:res_needed[0] color:rgb(166,206,227);
-//				data "Res 1 Bed Medium Rent" value:res_needed[1] color:rgb(178,223,138);
-//				data "Res 1 Bed High Rent" value:res_needed[2] color:rgb(51,160,44);
-//				data "Res 2 Bed Low Rent" value:res_needed[3] color:rgb(251,154,153);
-//				data "Res 2 Bed Medium Rent" value:res_needed[4] color:rgb(227,26,28);
-//				data "Res 2 Bed High Rent" value:res_needed[5] color:rgb(253,191,111);
-//				data "Res 3 Bed Low Rent" value:res_needed[6] color:rgb(31,120,180);
-//				data "Res 3 Bed Medium Rent" value:res_needed[7] color:rgb(255,127,0);
-//				data "Res 3 Bed High Rent" value:res_needed[8] color:rgb(202,178,214);
-//			}			
-//		}
-		display modes refresh:every(1000){
-			chart "Modal Split" background:#white type: pie  
-				{
-					loop i from: 0 to: length(modal_split.keys)-1	{
-					  data modal_split.keys[i] value: modal_split.values[i] color:color_per_mobility[modal_split.keys[i]];
-					}
-				}			
+		display housing autosave:false refresh:every(1000){
+			chart "Housing Demand" background:#white type:pie {
+				data "Res 1 Bed Low Rent" value:res_needed[0] color:rgb(166,206,227);
+				data "Res 1 Bed Medium Rent" value:res_needed[1] color:rgb(178,223,138);
+				data "Res 1 Bed High Rent" value:res_needed[2] color:rgb(51,160,44);
+				data "Res 2 Bed Low Rent" value:res_needed[3] color:rgb(251,154,153);
+				data "Res 2 Bed Medium Rent" value:res_needed[4] color:rgb(227,26,28);
+				data "Res 2 Bed High Rent" value:res_needed[5] color:rgb(253,191,111);
+				data "Res 3 Bed Low Rent" value:res_needed[6] color:rgb(31,120,180);
+				data "Res 3 Bed Medium Rent" value:res_needed[7] color:rgb(255,127,0);
+				data "Res 3 Bed High Rent" value:res_needed[8] color:rgb(202,178,214);
+			}			
 		}
-		display city_display autosave:true type:opengl {
+//		display modes autosave:false refresh:every(1000){
+//			chart "Modal Split" background:#white type: pie  
+//				{
+//					loop i from: 0 to: length(modal_split.keys)-1	{
+//					  data modal_split.keys[i] value: modal_split.values[i] color:color_per_mobility[modal_split.keys[i]];
+//					}
+//				}			
+//		}
+		display city_display autosave:false type:opengl {
 			species zones aspect: base ;
 			species road aspect: base ;
-			species buildings aspect: base ;
+			species amenities aspect: base ;
+			species interactionZone aspect: base ;
 			species people transparency:0.2 aspect: base ;
-			overlay position: { 3,3 } size: { 120 #px, 140 #px } background: # gray transparency: 0.8 border: # black 
+			overlay position: { 3,3 } size: { 150 #px, 170 #px } background: # gray transparency: 0.8 border: # black 
             {	
             		draw string(current_date.hour) + "h" + string(current_date.minute) +"m" at: { 20#px, 30#px } color: # black font: font("Helvetica", 25, #italic) perspective:false;
-  				draw "Mobility Modes" at: { 20#px, 60#px } color: #black font: font("Helvetica", 15, #bold) perspective:false;
-  				draw "Car" at: { 20#px, 75#px } color: #red font: font("Helvetica", 15, #bold ) perspective:false;
-  				draw "Bike" at: { 20#px, 90#px } color: #blue font: font("Helvetica", 15, #bold ) perspective:false;
-  				draw "Public Transit" at: { 20#px, 105#px } color: #yellow font: font("Helvetica", 15, #bold ) perspective:false;
-  				draw "Walk" at: { 20#px, 120#px } color: #green font: font("Helvetica", 15, #bold ) perspective:false;
+//  				draw "Mobility Modes" at: { 20#px, 60#px } color: #black font: font("Helvetica", 15, #bold) perspective:false;
+  				draw "Car "+int(1000*modal_split["car"]/all_trips)/10 +"%" at: { 20#px, 60#px } color: #red font: font("Helvetica", 20, #bold ) perspective:false;
+  				draw "Bike "+int(1000*modal_split["bike"]/all_trips)/10 +"%" at: { 20#px, 90#px } color: #blue font: font("Helvetica", 20, #bold ) perspective:false;
+  				draw "PT "+int(1000*modal_split["PT"]/all_trips)/10 +"%" at: { 20#px, 120#px } color: #yellow font: font("Helvetica", 20, #bold ) perspective:false;
+  				draw "Walk " +int(1000*modal_split["walk"]/all_trips)/10 +"%" at: { 20#px, 150#px } color: #green font: font("Helvetica", 20, #bold ) perspective:false;
             }
 		
 				

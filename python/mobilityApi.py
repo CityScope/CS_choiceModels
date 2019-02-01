@@ -89,7 +89,7 @@ utm19N=pyproj.Proj("+init=EPSG:32619")
 wgs84=pyproj.Proj("+init=EPSG:4326")
 host='https://cityio.media.mit.edu/'
 #host='http://localhost:8080/' # local port running cityio
-cityIO_url='{}api/table/CityScopeJS'.format(host)
+cityIO_url='{}api/table/mocho'.format(host)
 sampleMultiplier=int(1/(0.05*0.35)) # PUMS sampling * my subsampling
 peoplePerFloor=50
 

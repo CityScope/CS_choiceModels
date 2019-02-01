@@ -53,7 +53,7 @@ global {
 	map<string,int> modal_split <- map(['car', 'bike', 'walk', 'PT'] collect (each::0));
 	int all_trips<-0;
 	
-	map<string,rgb> color_per_mobility <- ["car"::#red, "bike"::#blue, 'walk'::#green, 'PT'::#yellow];
+	map<string,rgb> color_per_mobility <- ["car"::#red, "bike"::#blue, 'walk'::rgb(124,252,0), 'PT'::#yellow];
 	map<string,int> speed_per_mobility <- ["car"::20, "bike"::10, 'walk'::5, 'PT'::15];
 	
 	list nm_occats<-[occat_1, occat_2, occat_3, occat_4, occat_5];
@@ -129,7 +129,7 @@ global {
 
 species zones {
 	string zoneId; 
-	rgb color <- #gray  ;
+	rgb color <- rgb(20,20,20)  ;
 	
 	aspect base {
 		draw shape color: color ;
@@ -137,7 +137,7 @@ species zones {
 }
 
 species road  {
-	rgb color <- #white ;
+	rgb color <- rgb(100,100,100) ;
 	
     aspect base {
 	draw shape color: color ;
@@ -314,7 +314,7 @@ species people skills:[moving] {
 		}
 		else if mode='bike'{
 			speed<-10.0 #km/#h;
-			color<-#blue;
+			color<-rgb(100,149,237);
 		}
 		else if mode='PT'{
 			speed<-15.0 #km/#h;
@@ -366,7 +366,7 @@ experiment mobilityAI type: gui {
 //					}
 //				}			
 //		}
-		display city_display autosave:false type:opengl {
+		display city_display background:#black autosave:{1600,900} type:opengl {
 			species zones aspect: base ;
 			species road aspect: base ;
 			species amenities aspect: base ;
@@ -374,12 +374,12 @@ experiment mobilityAI type: gui {
 			species people transparency:0.2 aspect: base ;
 			overlay position: { 3,3 } size: { 150 #px, 170 #px } background: # gray transparency: 0.8 border: # black 
             {	
-            		draw string(current_date.hour) + "h" + string(current_date.minute) +"m" at: { 20#px, 30#px } color: # black font: font("Helvetica", 25, #italic) perspective:false;
+            		draw string(current_date.hour) + "h" + string(current_date.minute) +"m" at: { 20#px, 30#px } color: # white font: font("Helvetica", 25, #italic) perspective:false;
 //  				draw "Mobility Modes" at: { 20#px, 60#px } color: #black font: font("Helvetica", 15, #bold) perspective:false;
   				draw "Car "+int(1000*modal_split["car"]/all_trips)/10 +"%" at: { 20#px, 60#px } color: #red font: font("Helvetica", 20, #bold ) perspective:false;
-  				draw "Bike "+int(1000*modal_split["bike"]/all_trips)/10 +"%" at: { 20#px, 90#px } color: #blue font: font("Helvetica", 20, #bold ) perspective:false;
+  				draw "Bike "+int(1000*modal_split["bike"]/all_trips)/10 +"%" at: { 20#px, 90#px } color: rgb(100,149,237) font: font("Helvetica", 20, #bold ) perspective:false;
   				draw "PT "+int(1000*modal_split["PT"]/all_trips)/10 +"%" at: { 20#px, 120#px } color: #yellow font: font("Helvetica", 20, #bold ) perspective:false;
-  				draw "Walk " +int(1000*modal_split["walk"]/all_trips)/10 +"%" at: { 20#px, 150#px } color: #green font: font("Helvetica", 20, #bold ) perspective:false;
+  				draw "Walk " +int(1000*modal_split["walk"]/all_trips)/10 +"%" at: { 20#px, 150#px } color: rgb(124,252,0) font: font("Helvetica", 20, #bold ) perspective:false;
             }
 		
 				

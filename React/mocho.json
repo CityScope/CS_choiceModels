@@ -1,0 +1,41 @@
+{
+  "table": {
+    "grid": [],
+    "id": "",
+    "objects": {
+      "interval": 250,
+      "gui": 1,
+      "cityio": 1,
+      "codes": [
+        "0000000000000000",
+        "0001000000000000",
+        "0011001111001100",
+        "1100110000000000",
+        "1111111100110011"
+      ],
+      "sliders": [{ "0": 191, "1": 255 }]
+    },
+    "header": {
+      "name": "mocho",
+      "longName": "mocho",
+      "block": ["type"],
+      "mapping": {
+        "type": ["0", "1", "2", "3", "4"],
+        "rotation": ["0", "1", "2", "3"]
+      },
+      "spatial": {
+        "ncols": 16,
+        "nrows": 16,
+        "physical_longitude": 42,
+        "physical_latitude": -71,
+        "latitude": 42,
+        "longitude": 71,
+        "cellsize": 20
+      },
+      "owner": {
+        "name": "Ariel Noyman",
+        "institute": "City Science MIT Media Lab"
+      }
+    }
+  }
+}

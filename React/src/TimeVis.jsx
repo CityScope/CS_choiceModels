@@ -26,7 +26,7 @@ export class TimeVis extends React.Component {
   render() {
     const { time } = this.state;
     const seconds = time % 100;
-    const eight = time % 800;
+    const eight = time % 500;
     // const timerText = <Timer timer={this.state.time} />;
 
     return (
@@ -52,7 +52,7 @@ export class TimeVis extends React.Component {
                 radius: 3
               },
               {
-                time: (eight / 800) * 3.14 * 2,
+                time: (eight / 500) * 3.14 * 2,
                 radius0: 4,
                 radius: 8
               }

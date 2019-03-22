@@ -54,7 +54,9 @@ import { TimeVis } from "./TimeVis";
 //https://github.com/reactjs/react-timer-mixin/issues/4
 var ReactInterval = require("react-timer-mixin");
 
-const cityIOapi = "https://cityio.media.mit.edu/api/table/mocho";
+// const cityIOapi = "https://cityio.media.mit.edu/api/table/mocho";
+const cityIOapi = "https://cityio.media.mit.edu/api/table/grasbrook";
+
 const ODapi = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/od";
 const ODapiTS = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/ts";
 const GeoJsonAPI = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/geo";
@@ -138,6 +140,7 @@ class App extends React.Component {
   getCityIO = async () => {
     try {
       const res = await fetch(cityIOapi);
+
       const cityIOdata = await res.json();
 
       this.setState({ cityIOtableData: cityIOdata });
@@ -176,7 +179,10 @@ class App extends React.Component {
   //listen to slider events in cityIO
   _sliderListener = c => {
     let sliderState;
-    let sliderObj = c.objects.sliders[0];
+    // define the area in the grid that is
+    // relevant to the grid area
+    let sliderObj = [{ "0": 191, "1": 255 }];
+
     for (
       let i = sliderObj[0];
       i <= sliderObj[1];

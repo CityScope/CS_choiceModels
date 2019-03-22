@@ -43,7 +43,7 @@ export function parseCityIO(cityIOdata) {
     for (let j = 0; j < cityIOdata.header.spatial.nrows; j++) {
       textArr.push({
         coordinates: [0.00025 * j + siteCord[0], 0.00025 * i + siteCord[1]],
-        cellData: cityIOdata.grid[counter].toString()
+        cellData: cityIOdata.grid[counter][0].toString()
       });
       counter++;
     }

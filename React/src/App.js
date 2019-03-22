@@ -55,7 +55,7 @@ import { TimeVis } from "./TimeVis";
 var ReactInterval = require("react-timer-mixin");
 
 // const cityIOapi = "https://cityio.media.mit.edu/api/table/mocho";
-const cityIOapi = "https://cityio.media.mit.edu/api/table/grasbrook";
+const cityIOapi = "https://cityio.media.mit.edu/api/table/mocho";
 
 const ODapi = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/od";
 const ODapiTS = "https://cityio.media.mit.edu/choiceModels/volpe/v1.0/ts";

@@ -181,16 +181,11 @@ class App extends React.Component {
     let sliderState;
     // define the area in the grid that is
     // relevant to the grid area
-    let sliderObj = [{ "0": 191, "1": 255 }];
 
-    for (
-      let i = sliderObj[0];
-      i <= sliderObj[1];
-      i = i + c.header.spatial.ncols
-    ) {
+    for (let i = 250; i <= 255; i = i + 1) {
       if (c.grid[i] !== -1) {
         sliderState = {
-          type: c.grid[i],
+          type: c.grid[i][0],
           value: i
         };
       }

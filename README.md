@@ -1,6 +1,6 @@
 # Mobility Choice API for CityScope Platform
 Predicts mobility choices of simulated individuals based on individual characteristics and land use. The choice models are calibrated based on census data and the individual choices are influenced by initial conditions and by user interactions, as captured by the cityIO server.
-
+ 
 ![viz](./screen.png)
 
 

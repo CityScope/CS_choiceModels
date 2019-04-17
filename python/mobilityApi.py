@@ -114,7 +114,7 @@ LU_types=["LIVE_1", "LIVE_2", "WORK_1", "WORK_2"] # the LU types we are interest
 lu_changes={}
 landAreas={}
 altRes={}
-sliderHeights={lu:1 for lu in LU_types}
+sliderHeights={lu:4 for lu in LU_types}
 
 # TODO Dont use a constant here
 topLeft_lonLat={'lat':42.367867,   'lon':  -71.087913}
@@ -216,12 +216,12 @@ def create_app():
                     #find grids of this LU and the add to the corresponding zone
                     for lu in LU_types:
                         lu_gridCells=[g for g in range(len(cityIO_data['grid'])) if cityIO_data['grid'][g] ==revTypeMap[lu]]
-                        lu_sliderCells=[g for g in lu_gridCells if g in sliderMap]
+#                        lu_sliderCells=[g for g in lu_gridCells if g in sliderMap]
                         lu_gridCells=[g for g in lu_gridCells if g not in sliderMap]
-                        if lu_sliderCells:
-                            sliderValue=sliderMap[lu_sliderCells[-1]] # in case there are ever more than 1, take the higher one
-#                            print(lu+': '+str(sliderValue))
-                            sliderHeights[lu]=sliderValue
+#                        if lu_sliderCells:
+#                            sliderValue=sliderMap[lu_sliderCells[-1]] # in case there are ever more than 1, take the higher one
+##                            print(lu+': '+str(sliderValue))
+#                            sliderHeights[lu]=sliderValue
                         lu_zones=[grid2Geo[gc] for gc in lu_gridCells]
                         for iz in interactionZones:
                             lu_changes[iz][lu]=sum([sliderHeights[lu] for luz in lu_zones if luz==iz])

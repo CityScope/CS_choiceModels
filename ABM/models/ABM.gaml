@@ -2,15 +2,16 @@ model ABM
 
 global {
 	// FILES
-	file geojson_zones <- file("../includes/geoIdsGAMA.geojson");
-	file geojson_roads <- file("../includes/bostonRoads1234.geojson");
-	file geojson_grid <- file("../includes/bostonGrid2x2.geojson");
-	file geojson_amenities <- file("../includes/amenitiesGBA.geojson");
-	file occat_1_pop <- file("../includes/pop_occat_1.csv"); // populations to sample workers  of each type from from 
-	file occat_2_pop <- file("../includes/pop_occat_2.csv");
-	file occat_3_pop <- file("../includes/pop_occat_3.csv");
-	file occat_4_pop <- file("../includes/pop_occat_4.csv");
-	file occat_5_pop <- file("../includes/pop_occat_5.csv");
+	string city_name<-'Boston';
+	file geojson_zones <- file("../includes/"+city_name+"geoIdsGAMA.geojson");
+	file geojson_roads <- file("../includes/"+city_name+"network.geojson");
+	file geojson_grid <- file("../includes/"+city_name+"interaction_zone.geojson");
+	file geojson_amenities <- file("../includes/"+city_name+"amenitiesGBA.geojson");
+	file occat_1_pop <- file("../includes/"+city_name+"pop_occat_1.csv"); // populations to sample workers  of each type from from 
+	file occat_2_pop <- file("../includes/"+city_name+"pop_occat_2.csv");
+	file occat_3_pop <- file("../includes/"+city_name+"pop_occat_3.csv");
+	file occat_4_pop <- file("../includes/"+city_name+"pop_occat_4.csv");
+	file occat_5_pop <- file("../includes/"+city_name+"pop_occat_5.csv");
 	matrix occat_1_mat <- matrix(occat_1_pop);
 	matrix occat_2_mat <- matrix(occat_2_pop);
 	matrix occat_3_mat <- matrix(occat_3_pop);

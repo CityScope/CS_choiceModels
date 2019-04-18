@@ -172,7 +172,7 @@ def create_app():
         global newPeople
         global spatialData
         global revTypeMap
-        global sliderMap
+#        global sliderMap
         global interactionZones
         global grid2Geo
         global altRes
@@ -186,12 +186,13 @@ def create_app():
                 else:
                     # if this is the first time the grid data has been retrived, need to set up the grid spatially
                     spatialData=cityIO_data['header']['spatial']
-                    typeMap=cityIO_data['header']['mapping']['type']
-                    revTypeMap={v:int(k) for k,v in typeMap.items()}
+#                    typeMap=cityIO_data['header']['mapping']['type']
+#                    revTypeMap={v:int(k) for k,v in typeMap.items()}
+                    revTypeMap={"LIVE_1":0,"LIVE_2":1,"WORK_1":2,"WORK_2":3}
                     #create the slider
-                    slider=cityIO_data['objects']['sliders'][0]
-                    sliderRange=list(reversed(range(slider['0'], slider['1']+1, spatialData['ncols'])))
-                    sliderMap={sliderRange[i]:i+1 for i in range(len(sliderRange))}
+#                    slider=cityIO_data['objects']['sliders'][0]
+#                    sliderRange=list(reversed(range(slider['0'], slider['1']+1, spatialData['ncols'])))
+#                    sliderMap={sliderRange[i]:i+1 for i in range(len(sliderRange))}
                     #create the grid
                     lon_grid, lat_grid=createGrid(topLeft_lonLat, topEdge_lonLat, utm19N, wgs84, spatialData)
                     #find the incidency relationship between grid cells and zones
@@ -215,9 +216,9 @@ def create_app():
                     lastId=cityIO_data['meta']['id']
                     #find grids of this LU and the add to the corresponding zone
                     for lu in LU_types:
-                        lu_gridCells=[g for g in range(len(cityIO_data['grid'])) if cityIO_data['grid'][g] ==revTypeMap[lu]]
+                        lu_gridCells=[g for g in range(len(cityIO_data['grid'])) if cityIO_data['grid'][g][0] ==revTypeMap[lu]]
 #                        lu_sliderCells=[g for g in lu_gridCells if g in sliderMap]
-                        lu_gridCells=[g for g in lu_gridCells if g not in sliderMap]
+#                        lu_gridCells=[g for g in lu_gridCells if g not in sliderMap]
 #                        if lu_sliderCells:
 #                            sliderValue=sliderMap[lu_sliderCells[-1]] # in case there are ever more than 1, take the higher one
 ##                            print(lu+': '+str(sliderValue))

@@ -90,8 +90,8 @@ wgs84=pyproj.Proj("+init=EPSG:4326")
 host='https://cityio.media.mit.edu/'
 #host='http://localhost:8080/' # local port running cityio
 cityIO_url='{}api/table/mocho'.format(host)
-sampleMultiplier=int(1/(0.05*0.35)) # PUMS sampling * my subsampling
-peoplePerFloor=50
+sampleMultiplier=int(1/(0.05*0.17)) # PUMS sampling * my subsampling
+peoplePerFloor=100
 
 #Health Impact Assessment parameters
 baseMR= 0.0090421
@@ -125,7 +125,7 @@ geoIdAttributes=pickle.load( open( "./results/geoidAttributes.p", "rb" ) )
 geoIdGeo_subset=pickle.load( open( "./results/tractsMassSubset.p", "rb" ) )
 simPop_mnl=pickle.load( open('./results/simPop_mnl.p', 'rb'))
 longSimPop=pickle.load( open('./results/longSimPop.p', 'rb'))
-
+longSimPop=longSimPop[0:28000]
 
 #add centroids
 for f in geoIdGeo_subset['features']:
@@ -212,7 +212,7 @@ def create_app():
                 if cityIO_data['meta']['id']==lastId:
                     pass
                 else:
-                    logging.info('change at '+str(startBg))
+#                    logging.info('change at '+str(startBg))
                     lastId=cityIO_data['meta']['id']
                     #find grids of this LU and the add to the corresponding zone
                     for lu in LU_types:
@@ -274,9 +274,14 @@ def create_app():
                     print('Working in IZ: ' + str(sum(longSimPop_combined['d']==193)/4))
                     print('updating ts')
                     lastTimestamp=cityIO_data['meta']['timestamp']
-                    logging.info('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
+#                    logging.info('BG thread took: '+str(((datetime.datetime.now()-startBg).microseconds)/1e6)+' seconds')
             except urllib.error.HTTPError:
                 print("HTTP error when getting cityIO updates")
+            except TypeError:
+                print('Type Error')
+                print('Grid data: '+ str(cityIO_data['grid']))
+            except:
+                print('Other Error')
         yourThread = threading.Timer(POOL_TIME, background, args=())
         yourThread.start()        
 

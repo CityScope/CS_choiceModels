@@ -57,10 +57,10 @@ var ReactInterval = require("react-timer-mixin");
 // const cityIOapi = "https://cityio.media.mit.edu/api/table/mocho";
 const cityIOapi = "https://cityio.media.mit.edu/api/table/mocho";
 
-const ODapi = "http://csplayground.media.mit.edu/choiceModels/volpe/v1.0/od";
-const ODapiTS = "http://csplayground.media.mit.edu/choiceModels/volpe/v1.0/ts";
+const ODapi = "https://csplayground.media.mit.edu/choiceModels/volpe/v1.0/od";
+const ODapiTS = "https://csplayground.media.mit.edu/choiceModels/volpe/v1.0/ts";
 const GeoJsonAPI =
-  "http://csplayground.media.mit.edu/choiceModels/volpe/v1.0/geo";
+  "https://csplayground.media.mit.edu/choiceModels/volpe/v1.0/geo";
 const INITIAL_VIEW_STATE = {
   latitude: 42.3601,
   longitude: -71.0942,
